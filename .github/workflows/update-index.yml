@@ -29,4 +29,5 @@ jobs:
           git config user.email "actions@github.com"
           git add filelist.js
           git diff --staged --quiet || git commit -m "Update filelist.js"
+          git pull --rebase
           git push
