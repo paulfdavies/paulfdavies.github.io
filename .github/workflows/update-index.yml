@@ -23,11 +23,11 @@ jobs:
           done
           echo "];" >> filelist.js
 
-      - name: Commit filelist.js
+      - name: Commit and push filelist.js
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
+          git pull --rebase origin main
           git add filelist.js
           git diff --staged --quiet || git commit -m "Update filelist.js"
-          git pull --rebase
-          git push
+          git push origin main --force-with-lease
