@@ -3,6 +3,8 @@ name: Update filelist.js
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'filelist.js'
 
 jobs:
   update-filelist:
