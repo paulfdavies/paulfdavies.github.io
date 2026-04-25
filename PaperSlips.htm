@@ -132,7 +132,7 @@
   </div>
 
   <div id="toolbar" role="group" aria-label="Controls">
-    <input id="entry" type="text" placeholder="word, phrase, # Heading  —  use \, for a literal comma" aria-label="Add words or phrases" />
+    <input id="entry" type="text" placeholder="Type words or comma‑separated phrases, then press Enter… (use \, for a literal comma)" aria-label="Add words or phrases" />
     <button id="addBtn" title="Add to board">Add</button>
     <button id="importBtn" title="Import CSV">Import</button>
     <button id="exportBtn" title="Export CSV">Export</button>
@@ -303,7 +303,7 @@
           if (lastTap.card === card && now - lastTap.time < 350) {
             lastTap = { card: null, time: 0 };
             e.preventDefault();
-            const t = prompt('Edit text', card.dataset.raw ?? card.textContent);
+            const t = prompt('Edit text  (tip: start with "# " for bold:  # Bold)', card.dataset.raw ?? card.textContent);
             if (t !== null) { const newText = t.trim(); if (newText.length > 0) renderCard(card, newText); }
             return;
           }
@@ -352,7 +352,7 @@
         });
 
         card.addEventListener('dblclick', () => {
-          const t = prompt('Edit text', card.dataset.raw ?? card.textContent);
+          const t = prompt('Edit text  (tip: start with "# " for bold:  # Bold)', card.dataset.raw ?? card.textContent);
           if (t !== null) {
             const newText = t.trim();
             if (newText.length > 0) renderCard(card, newText);
