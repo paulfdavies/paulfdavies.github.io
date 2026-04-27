@@ -29,6 +29,7 @@ const FILE_LIST = [
   { name: "icebreakers_random_question_deck_fixed.html", modified: "2026-04-24" },
   { name: "roman-numerals-weighted-reveal.html", modified: "2026-04-24" },
   { name: "slang_quiz_offline_auto.html", modified: "2026-04-24" },
+  { name: "wordcount.html", modified: "2026-04-27" },
   { name: "GenresFlashcards.htm", modified: "2026-04-24" },
   { name: "PaperSlips.htm", modified: "2026-04-26" },
 ];
