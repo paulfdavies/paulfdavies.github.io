@@ -387,12 +387,14 @@
             renderGrid(); renderStaff();
         }
 
-        function generateGridMatrix(isCSV = false) {
+function generateGridMatrix(isCSV = false) {
             const delimiter = isCSV ? "," : "\t";
             const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
             const sessions = ['AM (P1/P2)', 'PM (P3/P4)'];
             let rows = [];
+            
             rows.push(["Session", ...days]);
+            
             sessions.forEach(session => {
                 let maxRooms = 0;
                 let sessionSlotsByDay = {};
@@ -401,9 +403,11 @@
                     sessionSlotsByDay[day] = slots;
                     if (slots.length > maxRooms) maxRooms = slots.length;
                 });
+                
                 for (let i = 0; i < maxRooms; i++) {
                     let row = [];
                     if (i === 0) row.push(session); else row.push(""); 
+                    
                     days.forEach(day => {
                         let slots = sessionSlotsByDay[day];
                         if (i < slots.length) {
@@ -413,10 +417,22 @@
                             let p1 = p1Obj ? p1Obj.name : "Empty";
                             let p2 = p2Obj ? p2Obj.name : "Empty";
                             let staffStr = (p1 === p2) ? p1 : `${p1} / ${p2}`;
-                            let cellText = exam.isManager ? `[Mgr] ${staffStr}` : `${exam.room}: ${staffStr}`;
+                            
+                            // Check if it's a mixed Access/PC/Small room
+                            let isMixed = exam.room.toLowerCase().includes('pc') || 
+                                          exam.room.toLowerCase().includes('small') || 
+                                          exam.subject.toLowerCase().includes('access');
+                            
+                            // Format the room display text
+                            let roomText = isMixed ? exam.room : `${exam.room} (${exam.subject})`;
+                            
+                            let cellText = exam.isManager ? `[Mgr] ${staffStr}` : `${roomText}: ${staffStr}`;
+                            
                             if(isCSV) cellText = `"${cellText.replace(/"/g, '""')}"`;
                             row.push(cellText);
-                        } else row.push("");
+                        } else {
+                            row.push("");
+                        }
                     });
                     rows.push(row);
                 }
