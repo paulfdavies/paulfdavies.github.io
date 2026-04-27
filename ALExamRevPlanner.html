@@ -19,6 +19,9 @@
         .sub-row { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f9f9f9; font-size: 0.95rem; }
         .sub-row:hover { background: #f9f9f9; }
         .sub-row label { cursor: pointer; flex: 1; margin-left: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .session-controls { display: none; align-items: center; gap: 5px; margin-left: auto; flex-shrink: 0; }
+        .session-btn { width: 28px; height: 28px; border: none; border-radius: 50%; cursor: pointer; font-size: 1.1rem; font-weight: bold; color: #fff; display: flex; align-items: center; justify-content: center; touch-action: manipulation; flex-shrink: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.25); }
+        .session-count { font-size: 0.75rem; min-width: 14px; text-align: center; color: #555; font-weight: bold; }
         
         .color-lozenge {
             display: inline-block; width: 20px; height: 20px; border-radius: 4px; margin: 0 4px; 
@@ -255,6 +258,13 @@ const subjects = [...new Set(EXAM_DB.map(e => e.sub))].sort();
 let subjectColors = {};
 subjects.forEach((s, i) => subjectColors[s] = ORIGINAL_COLORS[i % ORIGINAL_COLORS.length]);
 
+const subjectSessionCounts = {};
+
+function getDayForSession(n) {
+    if (n < REVISION_PATTERN.length) return REVISION_PATTERN[n];
+    return REVISION_PATTERN[REVISION_PATTERN.length - 1] + 2 * (n - REVISION_PATTERN.length + 1);
+}
+
 // MOBILE TAP-TO-MOVE LOGIC
 let selectedItem = null;
 
@@ -293,6 +303,11 @@ subjects.forEach(s => {
             <span class="color-lozenge" id="loz-${safeId}" style="background-color: ${subjectColors[s]};" 
                   onclick="swapColor('${s}', this)" title="Tap to swap color"></span>
             <label for="chk-${safeId}" title="${s}">${s}</label>
+            <div class="session-controls" id="ctrl-${safeId}">
+                <button class="session-btn" id="btn-minus-${safeId}" onclick="removeSession('${s}','${safeId}')" style="background:${subjectColors[s]}">−</button>
+                <span class="session-count" id="scount-${safeId}">${REVISION_PATTERN.length}</span>
+                <button class="session-btn" id="btn-plus-${safeId}" onclick="addSession('${s}','${safeId}')" style="background:${subjectColors[s]}">+</button>
+            </div>
         </div>`;
 });
 
@@ -336,6 +351,51 @@ function refreshAllSubjects() {
         const color = isShaded ? shadeHexColor(subjectColors[sub], shadePercent) : subjectColors[sub];
         el.style.backgroundColor = color;
     });
+    subjects.forEach(s => {
+        const sid = s.replace(/[^a-zA-Z0-9]/g, '-');
+        const c = subjectColors[s];
+        const p = document.getElementById(`btn-plus-${sid}`);
+        const m = document.getElementById(`btn-minus-${sid}`);
+        if (p) p.style.background = c;
+        if (m) m.style.background = c;
+    });
+    saveState();
+}
+
+function addSession(sub, safeId) {
+    const count = subjectSessionCounts[sub] !== undefined ? subjectSessionCounts[sub] : REVISION_PATTERN.length;
+    const daysBack = getDayForSession(count);
+    const myExams = EXAM_DB.filter(e => e.sub === sub);
+    const isShaded = document.getElementById('shadeToggle').checked;
+
+    myExams.forEach((ex, index) => {
+        const shortPaper = getShortPaperName(ex.title);
+        const shadePercent = SHADE_OFFSETS[index % SHADE_OFFSETS.length];
+        const blockColor = isShaded ? shadeHexColor(subjectColors[sub], shadePercent) : subjectColors[sub];
+        let rd = new Date(ex.date); rd.setDate(rd.getDate() - daysBack);
+        let rStr = rd.toISOString().split('T')[0];
+        let timeSlot = getLeastCrowdedSlot(rStr, 'PM');
+        const rSlot = document.getElementById(`slot-${rStr}-${timeSlot}`);
+        if (rSlot) {
+            const id = `rev-${Math.random().toString(36).substr(2,9)}`;
+            rSlot.innerHTML += `<div class="item revision" id="${id}" data-sub="${sub}" data-paper-index="${index}" data-days-before="${daysBack}" draggable="true" ondragstart="drag(event)" onclick="handleItemClick(event, this)" style="background:${blockColor}">${sub} ${shortPaper}<br>(Extra)</div>`;
+        }
+    });
+
+    subjectSessionCounts[sub] = count + 1;
+    document.getElementById(`scount-${safeId}`).textContent = count + 1;
+    updateVisibleWeeks();
+    saveState();
+}
+
+function removeSession(sub, safeId) {
+    const count = subjectSessionCounts[sub] !== undefined ? subjectSessionCounts[sub] : REVISION_PATTERN.length;
+    if (count <= 1) return;
+    const daysBack = getDayForSession(count - 1);
+    document.querySelectorAll(`.item.revision[data-sub="${sub}"][data-days-before="${daysBack}"]`).forEach(el => el.remove());
+    subjectSessionCounts[sub] = count - 1;
+    document.getElementById(`scount-${safeId}`).textContent = count - 1;
+    updateVisibleWeeks();
     saveState();
 }
 
@@ -538,11 +598,13 @@ function toggleSubject(sub, safeId) {
                 const rSlot = document.getElementById(`slot-${rStr}-${timeSlot}`);
                 if(rSlot) {
                     const id = `rev-${Math.random().toString(36).substr(2,9)}`;
-                    rSlot.innerHTML += `<div class="item revision" id="${id}" data-sub="${sub}" data-paper-index="${index}" draggable="true" ondragstart="drag(event)" onclick="handleItemClick(event, this)"
+                    rSlot.innerHTML += `<div class="item revision" id="${id}" data-sub="${sub}" data-paper-index="${index}" data-days-before="${daysBack}" draggable="true" ondragstart="drag(event)" onclick="handleItemClick(event, this)"
                         style="background:${blockColor}">${sub} ${shortPaper}<br>(${daysBack}d)</div>`;
                 }
             });
         });
+        subjectSessionCounts[sub] = REVISION_PATTERN.length;
+        document.getElementById(`ctrl-${safeId}`).style.display = 'flex';
     } else {
         // Find dates that need to be re-evaluated for clashes when a subject is removed
         document.querySelectorAll(`[data-sub="${sub}"]`).forEach(el => {
@@ -552,6 +614,8 @@ function toggleSubject(sub, safeId) {
             }
             el.remove();
         });
+        delete subjectSessionCounts[sub];
+        document.getElementById(`ctrl-${safeId}`).style.display = 'none';
     }
 
     // Run the clash resolution engine for affected days
@@ -616,6 +680,23 @@ function loadState() {
         const safeId = c.replace(/[^a-zA-Z0-9]/g, '-');
         const chk = document.getElementById(`chk-${safeId}`);
         if(chk) chk.checked = true;
+
+        const ctrl = document.getElementById(`ctrl-${safeId}`);
+        if (ctrl) ctrl.style.display = 'flex';
+
+        const days = new Set(
+            Array.from(document.querySelectorAll(`.item.revision[data-sub="${c}"]`))
+                .map(el => el.getAttribute('data-days-before')).filter(Boolean)
+        );
+        const sessionCount = days.size || REVISION_PATTERN.length;
+        subjectSessionCounts[c] = sessionCount;
+        const scountEl = document.getElementById(`scount-${safeId}`);
+        if (scountEl) scountEl.textContent = sessionCount;
+
+        const p = document.getElementById(`btn-plus-${safeId}`);
+        const m = document.getElementById(`btn-minus-${safeId}`);
+        if (p) p.style.background = subjectColors[c];
+        if (m) m.style.background = subjectColors[c];
     });
     
     updateVisibleWeeks();
