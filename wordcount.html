@@ -144,9 +144,8 @@ const ribbon = document.getElementById('ribbon');
 const disp   = document.getElementById('disp');
 
 function sz(i) {
-  const ref = Math.min(W.length - 1, cur + 2);
-  const ratio = W[i][1] / W[ref][1];
-  return Math.max(MINSZ, Math.min(MAXSZ * 2, MAXSZ * Math.pow(ratio, 0.55)));
+  const ref = Math.max(0, cur - LBUF);          // leftmost visible word, matches Flash words[0]
+  return Math.max(MINSZ, Math.min(MAXSZ, MAXSZ * W[i][1] / W[ref][1]));
 }
 function col(i) {
   return i % 2 === 0 ? '#111' : '#999';
