@@ -526,15 +526,16 @@
 
     function renderCard(card, rawText) {
       card.dataset.raw = rawText;
+      const strip = s => s.replace(/\\(\d)/g, '$1');
       if (/^# /.test(rawText)) {
         card.classList.add('heading');
-        card.textContent = rawText.slice(2);
+        card.textContent = strip(rawText.slice(2));
       } else if (rawText.startsWith('\\#')) {
         card.classList.remove('heading');
-        card.textContent = rawText.slice(1);
+        card.textContent = strip(rawText.slice(1));
       } else {
         card.classList.remove('heading');
-        card.textContent = rawText.replace(/\\(\d)/g, '$1');
+        card.textContent = strip(rawText);
       }
     }
 
