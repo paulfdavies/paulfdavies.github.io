@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Timeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --grid: 24px;
+      --accent: #0a68ff;
+      --paper: #fffbe6;
+      --paper-border: #e2cf86;
+      --toolbar-h: 68px;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; margin: 0; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #222;
+      background: #fafafa;
+    }
+
+    #board-wrapper {
+      position: fixed;
+      inset: 0 0 var(--toolbar-h) 0;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    #canvas {
+      position: relative;
+      height: 100%;
+      background:
+        linear-gradient(0deg,  rgba(0,0,0,0.025) 1px, transparent 1px) 0 0 / 100% var(--grid),
+        linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px) 0 0 / var(--grid) 100%,
+        #f6f8fb;
+    }
+
+    #timeline-svg, #connector-svg {
+      position: absolute;
+      top: 0; left: 0;
+      pointer-events: none;
+    }
+    #timeline-svg  { z-index: 1; }
+    #connector-svg { z-index: 2; }
+
+    #range-panel {
+      position: fixed;
+      top: 10px; left: 10px;
+      background: rgba(255,255,255,0.93);
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 6px 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      color: #555;
+      z-index: 300;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.10);
+      user-select: none;
+    }
+    #range-panel input[type=number] {
+      width: 64px; height: 28px;
+      padding: 2px 6px;
+      border: 1px solid #ccc; border-radius: 5px;
+      font-size: 13px; text-align: center;
+    }
+    #range-panel button {
+      height: 28px; padding: 0 10px;
+      border: 1px solid #bbb; background: #f0f4fb;
+      border-radius: 5px; font-size: 12px; cursor: pointer;
+    }
+    #range-panel button:hover { background: #dde8ff; }
+
+    #toolbar {
+      position: fixed;
+      left: 0; right: 0; bottom: 0;
+      height: var(--toolbar-h);
+      background: #fff;
+      border-top: 1px solid #e6e6e6;
+      display: flex; gap: 10px; align-items: center;
+      padding: 10px 12px;
+      z-index: 300;
+    }
+    #entry {
+      flex: 1; height: 44px;
+      padding: 10px 12px;
+      border: 1px solid #cfd7e4; border-radius: 8px;
+      font-size: 16px;
+    }
+    #addBtn, #importBtn, #exportBtn, #clearBtn, #deleteBtn {
+      height: 44px; padding: 0 14px;
+      border: 1px solid #cfd7e4; background: #f7f9fc;
+      border-radius: 8px; font-size: 15px; cursor: pointer;
+      white-space: nowrap;
+    }
+    #addBtn { background: #eaf3ff; border-color: #b7d2ff; }
+    #addBtn:hover { background: #dbeaff; }
+    #exportBtn:hover, #importBtn:hover, #clearBtn:hover,
+    #deleteBtn:hover:not(:disabled) { background: #eef2f7; }
+    #deleteBtn:disabled { opacity: 0.4; cursor: default; }
+
+    label.small {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 13px; color: #555;
+      margin-left: auto; user-select: none; white-space: nowrap;
+    }
+
+    .card {
+      position: absolute;
+      max-width: 280px;
+      background: var(--paper);
+      border: 1px solid var(--paper-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.06);
+      cursor: grab; touch-action: none; user-select: none;
+      white-space: pre-wrap; overflow-wrap: anywhere;
+      transition: box-shadow 120ms ease;
+      animation: pop-in 160ms ease-out;
+      font-size: 20px; line-height: 1.25;
+      z-index: 10;
+    }
+    .card:active { cursor: grabbing; }
+    .card.selected { outline: 2px dashed var(--accent); outline-offset: 2px; }
+    .card.heading  { font-size: 26px; font-weight: 700; max-width: 360px; }
+    @keyframes pop-in {
+      from { transform: scale(0.9); opacity: 0; }
+      to   { transform: scale(1.0); opacity: 1; }
+    }
+
+    .marquee {
+      position: absolute;
+      border: 1px dashed var(--accent);
+      background: rgba(10,104,255,0.10);
+      pointer-events: none; display: none; z-index: 500;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="range-panel">
+    <span>From</span>
+    <input id="fromInput" type="number" value="1800" />
+    <span>to</span>
+    <input id="toInput" type="number" value="2025" />
+    <button id="setRangeBtn">Set</button>
+  </div>
+
+  <div id="board-wrapper">
+    <div id="canvas">
+      <svg id="timeline-svg"  aria-hidden="true"></svg>
+      <svg id="connector-svg" aria-hidden="true"></svg>
+      <div id="marquee" class="marquee" aria-hidden="true"></div>
+    </div>
+  </div>
+
+  <div id="toolbar" role="group" aria-label="Controls">
+    <input id="entry" type="text"
+      placeholder="Type labels (comma-separated), then Enter. A year like 1914 pins to the timeline." />
+    <button id="addBtn">Add</button>
+    <button id="importBtn">Import</button>
+    <button id="exportBtn">Export</button>
+    <button id="clearBtn">Clear</button>
+    <button id="deleteBtn" disabled>Delete</button>
+    <label class="small"><input type="checkbox" id="snap" /> Snap to grid</label>
+    <input id="fileInput" type="file" accept=".csv,text/csv" hidden />
+  </div>
+
+  <script>
+  (() => {
+    // ── DOM ───────────────────────────────────────────────────────────────
+    const wrap      = document.getElementById('board-wrapper');
+    const cvs       = document.getElementById('canvas');
+    const tlSvg     = document.getElementById('timeline-svg');
+    const connSvg   = document.getElementById('connector-svg');
+    const marqEl    = document.getElementById('marquee');
+    const entry     = document.getElementById('entry');
+    const addBtn    = document.getElementById('addBtn');
+    const importBtn = document.getElementById('importBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const clearBtn  = document.getElementById('clearBtn');
+    const snapChk   = document.getElementById('snap');
+    const fileInput = document.getElementById('fileInput');
+    const deleteBtn = document.getElementById('deleteBtn');
+    const fromIn    = document.getElementById('fromInput');
+    const toIn      = document.getElementById('toInput');
+    const setBtn    = document.getElementById('setRangeBtn');
+
+    // ── Constants ─────────────────────────────────────────────────────────
+    const GRID    = 24;
+    const MARGIN  = 160; // px each side of timeline
+    const TL_FRAC = 0.48;
+    const PPY_MAX = 600; // max pixels per year
+
+    // ── State ─────────────────────────────────────────────────────────────
+    let fromYear = 1800, toYear = 2025;
+    let ppy    = 1;   // pixels per year (the zoom variable)
+    let canvasW = 0, canvasH = 0, tlY = 0;
+    let zCounter = 10;
+    let lastTap  = { card: null, time: 0 };
+    let dragging = null;
+    let panning  = null;
+    let selectedCards = new Set();
+    let marqState = null;
+
+    // ── Geometry ──────────────────────────────────────────────────────────
+    function getWrapH()  { return wrap.clientHeight || window.innerHeight - 68; }
+    function fitPpy()    { return (wrap.clientWidth - 2 * MARGIN) / (toYear - fromYear); }
+    function yearToX(yr) { return MARGIN + (yr - fromYear) * ppy; }
+    function xToYear(x)  { return fromYear + (x - MARGIN) / ppy; }
+    function snapV(n)    { return Math.round(n / GRID) * GRID; }
+    function clamp(v, lo, hi) { return v < lo ? lo : v > hi ? hi : v; }
+    function formatYear(yr) {
+      if (yr === 0) return '1 AD';
+      return yr < 0 ? `${-yr} BC` : String(yr);
+    }
+
+    // ── Tick config — driven by ppy so detail adapts on zoom ──────────────
+    // Nice step = smallest value from the list where step * ppy >= minPx
+    function niceStep(minPx) {
+      const list = [1, 2, 5, 10, 25, 50, 100, 250, 500, 1000, 2500, 5000];
+      return list.find(s => s * ppy >= minPx) ?? 5000;
+    }
+    function tickConfig() {
+      const major = niceStep(80);
+      const minor = niceStep(16);
+      const cfg = [{ step: major, label: true, h: 24 }];
+      if (minor < major) cfg.push({ step: minor, label: false, h: 10 });
+      return cfg;
+    }
+
+    // ── Draw timeline ─────────────────────────────────────────────────────
+    function updateTimeline() {
+      canvasH = getWrapH();
+      canvasW = Math.round((toYear - fromYear) * ppy) + 2 * MARGIN;
+      tlY     = Math.round(canvasH * TL_FRAC);
+
+      cvs.style.width  = canvasW + 'px';
+      cvs.style.height = canvasH + 'px';
+      tlSvg.setAttribute('width',  canvasW);
+      tlSvg.setAttribute('height', canvasH);
+      connSvg.setAttribute('width',  canvasW);
+      connSvg.setAttribute('height', canvasH);
+
+      const ns = 'http://www.w3.org/2000/svg';
+      while (tlSvg.firstChild) tlSvg.removeChild(tlSvg.lastChild);
+
+      const tlLeft  = MARGIN;
+      const tlRight = canvasW - MARGIN;
+
+      // Main bar
+      const ml = document.createElementNS(ns, 'line');
+      ml.setAttribute('x1', tlLeft);  ml.setAttribute('y1', tlY);
+      ml.setAttribute('x2', tlRight); ml.setAttribute('y2', tlY);
+      ml.setAttribute('stroke', '#555'); ml.setAttribute('stroke-width', '2');
+      tlSvg.appendChild(ml);
+
+      // End caps
+      [tlLeft, tlRight].forEach(x => {
+        const cap = document.createElementNS(ns, 'line');
+        cap.setAttribute('x1', x); cap.setAttribute('y1', tlY - 14);
+        cap.setAttribute('x2', x); cap.setAttribute('y2', tlY + 14);
+        cap.setAttribute('stroke', '#555'); cap.setAttribute('stroke-width', '2');
+        tlSvg.appendChild(cap);
+      });
+
+      // Ticks
+      tickConfig().forEach(({ step, label, h: tH }) => {
+        const first = Math.ceil(fromYear / step) * step;
+        for (let yr = first; yr <= toYear; yr += step) {
+          const x = Math.round(yearToX(yr));
+          const tick = document.createElementNS(ns, 'line');
+          tick.setAttribute('x1', x); tick.setAttribute('y1', tlY - tH / 2);
+          tick.setAttribute('x2', x); tick.setAttribute('y2', tlY + tH / 2);
+          tick.setAttribute('stroke', '#666');
+          tick.setAttribute('stroke-width', label ? '1.5' : '1');
+          tlSvg.appendChild(tick);
+
+          if (label) {
+            const txt = document.createElementNS(ns, 'text');
+            txt.setAttribute('x', x);
+            txt.setAttribute('y', tlY + tH / 2 + 15);
+            txt.setAttribute('text-anchor', 'middle');
+            txt.setAttribute('font-size', '12');
+            txt.setAttribute('fill', '#666');
+            txt.setAttribute('font-family', 'system-ui, sans-serif');
+            txt.textContent = formatYear(yr);
+            tlSvg.appendChild(txt);
+          }
+        }
+      });
+    }
+
+    // ── Zoom ──────────────────────────────────────────────────────────────
+    function doZoom(factor, focusClientX) {
+      const wRect = wrap.getBoundingClientRect();
+      const focusCanvasX = focusClientX - wRect.left + wrap.scrollLeft;
+      const focusYear    = xToYear(focusCanvasX);
+
+      const newPpy = clamp(ppy * factor, fitPpy(), PPY_MAX);
+      if (Math.abs(newPpy - ppy) < 1e-6) return;
+      const scale = newPpy / ppy;
+
+      // Scale all card x-positions proportionally (timeline origin is at MARGIN)
+      document.querySelectorAll('.card').forEach(c => {
+        const x = parseFloat(c.style.left) || 0;
+        c.style.left = `${MARGIN + (x - MARGIN) * scale}px`;
+      });
+
+      ppy = newPpy;
+      updateTimeline();
+
+      // Scroll so the focus year stays under the cursor
+      wrap.scrollLeft = yearToX(focusYear) - (focusClientX - wRect.left);
+      updateConnectors();
+    }
+
+    // Vertical scroll = zoom; horizontal scroll = pan (native)
+    wrap.addEventListener('wheel', e => {
+      if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return; // let horizontal pan through
+      e.preventDefault();
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= 30;  // line → px
+      if (e.deltaMode === 2) dy *= 300; // page → px
+      doZoom(Math.exp(-dy * 0.003), e.clientX);
+    }, { passive: false });
+
+    // ── Date parsing ──────────────────────────────────────────────────────
+    // Recognised patterns (prefix digits with \ to suppress, e.g. \1815):
+    //   Exact year:  1815  c.1815  ca.1815
+    //   Decade:      1870s  1870's  '90s  60s  (2-digit: unambiguous only)
+    //   Century:     16th c.  16th century  C20th  20th C  c.16th
+    // Returns { year, type:'exact'|'decade'|'century', from, to } or null
+    function parseDateInfo(raw) {
+      const text   = raw.replace(/^# /, '');
+      const masked = text.replace(/\\(\d{2,4})/g, m => '\x00'.repeat(m.length));
+      function inRange(yr) { return yr >= fromYear && yr <= toYear ? yr : null; }
+
+      // 0. Date range: 1600-1650  1600–1650  1600-50  1600 to 1650
+      //    Treated like a century: connector snaps to nearest tick within overlap.
+      const rangePats = [
+        /\b(\d{4})\s*(?:-|–|to)\s*(\d{4})\b/gi,   // full: 1600-1650 or 1600 to 1650
+        /\b(\d{4})\s*-\s*(\d{2})\b/g,               // abbreviated: 1600-50
+      ];
+      for (const pat of rangePats) {
+        for (const m of masked.matchAll(new RegExp(pat.source, pat.flags))) {
+          let rFrom = parseInt(m[1], 10);
+          let rTo   = parseInt(m[2], 10);
+          if (pat.source.includes('\\d{2}')) {
+            // Expand abbreviated end: 1600-50 → 1650
+            rTo = Math.floor(rFrom / 100) * 100 + rTo;
+            if (rTo < rFrom) rTo += 100;
+          }
+          if (rFrom > rTo) continue;
+          const oFrom = Math.max(rFrom, fromYear), oTo = Math.min(rTo, toYear);
+          if (oFrom > oTo) continue;
+          const yr = clamp(Math.floor(oTo / 10) * 10, oFrom, oTo);
+          return { year: yr, type: 'range', from: oFrom, to: oTo };
+        }
+      }
+
+      // 1. Approximate or exact 4-digit year: c.1815  ca.1815  1815
+      for (const m of masked.matchAll(/\bc\.?a?\.?\s*(\d{4})\b/gi)) {
+        const yr = inRange(parseInt(m[1], 10));
+        if (yr !== null) return { year: yr, type: 'exact', from: yr, to: yr };
+      }
+      for (const m of masked.matchAll(/\b(\d{4})\b/g)) {
+        const yr = inRange(parseInt(m[1], 10));
+        if (yr !== null) return { year: yr, type: 'exact', from: yr, to: yr };
+      }
+
+      // 2. 4-digit decade: c.1870s  1870s  1870's
+      for (const m of masked.matchAll(/\bc\.?a?\.?\s*(\d{4})'?s\b/gi)) {
+        const yr = inRange(parseInt(m[1], 10));
+        if (yr !== null) return { year: yr, type: 'decade', from: yr, to: Math.min(yr + 9, toYear) };
+      }
+      for (const m of masked.matchAll(/\b(\d{4})'?s\b/gi)) {
+        const yr = inRange(parseInt(m[1], 10));
+        if (yr !== null) return { year: yr, type: 'decade', from: yr, to: Math.min(yr + 9, toYear) };
+      }
+
+      // 3. 2-digit decade: 60s  '90s
+      // One match → fixed connector; multiple matches → position-resolved (ambiguous-decade)
+      for (const m of masked.matchAll(/(?<!\d)'?(\d{2})s\b/gi)) {
+        const d = parseInt(m[1], 10);
+        const hits = [];
+        for (let c = 0; c <= 21; c++) { const yr = c * 100 + d; if (inRange(yr) !== null) hits.push(yr); }
+        if (hits.length === 1)
+          return { year: hits[0], type: 'decade', from: hits[0], to: Math.min(hits[0] + 9, toYear) };
+        if (hits.length > 1)
+          return { year: null, type: 'ambiguous-decade', candidates: hits };
+      }
+
+      // 4. Century: 16th c.  16th century  20th C  C20th  c.16th
+      //    Pattern A: ordinal then century word  →  "16th c."  "20th century"
+      //    Pattern B: C/c then ordinal           →  "C20th"  "c.16th"
+      const centPats = [
+        /\b(\d+)(?:st|nd|rd|th)\s*(?:century|cent\.?\b|c\.?\b)/gi,
+        /\bc\.?\s*(\d+)(?:st|nd|rd|th)\b/gi,
+      ];
+      for (const pat of centPats) {
+        for (const m of masked.matchAll(new RegExp(pat.source, pat.flags))) {
+          const n = parseInt(m[1], 10);
+          if (n < 1 || n > 30) continue;
+          const centFrom = (n - 1) * 100, centTo = n * 100 - 1;
+          const oFrom = Math.max(centFrom, fromYear), oTo = Math.min(centTo, toYear);
+          if (oFrom > oTo) continue;
+          // Place at the latest decade within overlap (user's request)
+          const yr = clamp(Math.floor(oTo / 10) * 10, oFrom, oTo);
+          return { year: yr, type: 'century', from: oFrom, to: oTo };
+        }
+      }
+
+      return null;
+    }
+
+    // Wrapper for call sites that only need a single year
+    function parseCardDate(raw) { const i = parseDateInfo(raw); return i ? i.year : null; }
+
+    // ── Connector lines ───────────────────────────────────────────────────
+    // Exact dates: fixed connector to the year's x position.
+    // Decade/century: connector dot snaps to the nearest visible tick within
+    // the date range, tracking the card's current x as it is dragged.
+    function connectorAnchorX(card) {
+      const info = parseDateInfo(card.dataset.raw ?? card.textContent);
+      if (!info) return null;
+      if (info.type === 'exact') return yearToX(info.year);
+
+      const cardCx = (parseFloat(card.style.left) || 0) + card.offsetWidth / 2;
+      const cardYr = xToYear(cardCx);
+
+      if (info.type === 'ambiguous-decade') {
+        // Whichever candidate decade is nearest the card's current position wins
+        const best = info.candidates.reduce((a, b) =>
+          Math.abs(a - cardYr) <= Math.abs(b - cardYr) ? a : b);
+        return yearToX(best);
+      }
+
+      // decade / century: snap to nearest visible tick within the date range
+      const snapStep = tickConfig()[tickConfig().length - 1].step;
+      const clamped  = clamp(cardYr, info.from, info.to);
+      const snapped  = Math.round(clamped / snapStep) * snapStep;
+      return yearToX(clamp(snapped, info.from, info.to));
+    }
+
+    function updateConnectors() {
+      const ns = 'http://www.w3.org/2000/svg';
+      while (connSvg.firstChild) connSvg.removeChild(connSvg.lastChild);
+
+      document.querySelectorAll('.card').forEach(card => {
+        const txX = connectorAnchorX(card);
+        if (txX === null) return;
+
+        const cardLeft = parseFloat(card.style.left) || 0;
+        const cardTop  = parseFloat(card.style.top)  || 0;
+        const cardCx   = cardLeft + card.offsetWidth  / 2;
+        const cardCy   = cardTop  + card.offsetHeight / 2;
+        const anchorY  = cardCy < tlY ? cardTop + card.offsetHeight : cardTop;
+
+        const line = document.createElementNS(ns, 'line');
+        line.setAttribute('x1', Math.round(cardCx));
+        line.setAttribute('y1', Math.round(anchorY));
+        line.setAttribute('x2', Math.round(txX));
+        line.setAttribute('y2', tlY);
+        line.setAttribute('stroke', '#bbb');
+        line.setAttribute('stroke-width', '1');
+        line.setAttribute('stroke-dasharray', '5 4');
+        connSvg.appendChild(line);
+
+        const dot = document.createElementNS(ns, 'circle');
+        dot.setAttribute('cx', Math.round(txX));
+        dot.setAttribute('cy', tlY);
+        dot.setAttribute('r', '3');
+        dot.setAttribute('fill', '#999');
+        connSvg.appendChild(dot);
+      });
+    }
+
+    // ── Range control ─────────────────────────────────────────────────────
+    function applyRange(from, to, savedPpy = null) {
+      from = Math.round(from); to = Math.round(to);
+      if (!isFinite(from) || !isFinite(to) || to <= from) return;
+
+      // Convert all existing card x-positions to year-fractions before changing state
+      const saved = Array.from(document.querySelectorAll('.card')).map(c => ({
+        el: c,
+        yr: xToYear(parseFloat(c.style.left) || 0),
+        y:  parseFloat(c.style.top) || 0
+      }));
+
+      fromYear = from; toYear = to;
+      ppy = savedPpy !== null ? savedPpy : fitPpy();
+      updateTimeline();
+
+      // Restore card positions in new coordinate system
+      saved.forEach(({ el, yr, y }) => {
+        el.style.left = `${yearToX(yr)}px`;
+        el.style.top  = `${y}px`;
+      });
+
+      updateConnectors();
+    }
+
+    setBtn.addEventListener('click', () => applyRange(+fromIn.value, +toIn.value));
+    [fromIn, toIn].forEach(inp =>
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') applyRange(+fromIn.value, +toIn.value); })
+    );
+
+    // ── Text helpers ──────────────────────────────────────────────────────
+    function splitInput(text) {
+      const PH = '\x00';
+      return text.replace(/\\,/g, PH).split(',')
+        .map(s => s.trim().replace(/\x00/g, ',')).filter(Boolean);
+    }
+
+    function renderCard(card, rawText) {
+      card.dataset.raw = rawText;
+      if (/^# /.test(rawText)) {
+        card.classList.add('heading');
+        card.textContent = rawText.slice(2);
+      } else if (rawText.startsWith('\\#')) {
+        card.classList.remove('heading');
+        card.textContent = rawText.slice(1);
+      } else {
+        card.classList.remove('heading');
+        card.textContent = rawText;
+      }
+    }
+
+    function csvEscape(v) { const s = String(v).replace(/"/g, '""'); return `"${s}"`; }
+
+    // ── Selection ─────────────────────────────────────────────────────────
+    function updDelBtn()  { deleteBtn.disabled = selectedCards.size === 0; }
+    function clearSel()   { selectedCards.forEach(c => c.classList.remove('selected')); selectedCards.clear(); updDelBtn(); }
+    function addSel(c)    { if (selectedCards.has(c)) return; selectedCards.add(c); c.classList.add('selected'); c.style.zIndex = ++zCounter; updDelBtn(); }
+    function remSel(c)    { if (!selectedCards.has(c)) return; selectedCards.delete(c); c.classList.remove('selected'); updDelBtn(); }
+    function replaceSel(cs) { clearSel(); cs.forEach(addSel); }
+
+    // ── Card creation ─────────────────────────────────────────────────────
+    function createCard(text, x = null, y = null) {
+      const card = document.createElement('div');
+      card.className = 'card';
+      renderCard(card, text);
+
+      const isNew = (x === null && y === null);
+      let px, py;
+
+      if (!isNew) {
+        px = x; py = y;
+      } else {
+        const info = parseDateInfo(text);
+        if (info !== null && info.year !== null) {
+          px = yearToX(info.year) + (Math.random() - 0.5) * 60;
+        } else {
+          const vL = wrap.scrollLeft, vR = vL + wrap.clientWidth;
+          px = vL + (vR - vL) * (0.1 + Math.random() * 0.8);
+        }
+        const above = Math.random() < 0.5;
+        const gap = 30;
+        // Use card.offsetHeight = 0 here (not yet in DOM), so use an estimate
+        const estH = 60;
+        py = above
+          ? gap + Math.random() * Math.max(20, tlY - estH - gap * 2)
+          : tlY + gap + Math.random() * Math.max(20, canvasH - tlY - estH - gap * 2);
+      }
+
+      if (snapChk.checked) { px = snapV(px); py = snapV(py); }
+      card.style.left   = `${px}px`;
+      card.style.top    = `${py}px`;
+      card.style.zIndex = ++zCounter;
+      cvs.appendChild(card);
+
+      // Centre dated new cards on their year, then scroll to show them
+      if (isNew && parseDateInfo(text)?.year != null) {
+        card.style.left = `${Math.max(0, Math.round(px - card.offsetWidth / 2))}px`;
+        const cL = parseFloat(card.style.left), cR = cL + card.offsetWidth;
+        if (cR < wrap.scrollLeft || cL > wrap.scrollLeft + wrap.clientWidth) {
+          wrap.scrollLeft = Math.max(0, (cL + cR) / 2 - wrap.clientWidth / 2);
+        }
+      }
+
+      card.addEventListener('pointerdown', onCardDown);
+      card.addEventListener('dblclick',    onCardDblClick);
+      updateConnectors();
+      return card;
+    }
+
+    // ── Card interaction ──────────────────────────────────────────────────
+    function onCardDown(e) {
+      const card = e.currentTarget;
+      const now  = Date.now();
+      if (lastTap.card === card && now - lastTap.time < 350) {
+        lastTap = { card: null, time: 0 };
+        e.preventDefault(); editCard(card); return;
+      }
+      lastTap = { card, time: now };
+
+      const multi = e.ctrlKey || e.metaKey;
+      if (multi) { if (selectedCards.has(card)) remSel(card); else addSel(card); }
+      else        { if (!selectedCards.has(card)) replaceSel([card]); }
+      if (!selectedCards.size) return;
+
+      const wRect = wrap.getBoundingClientRect();
+      dragging = {
+        anchor:    card,
+        pointerId: e.pointerId,
+        members:   Array.from(selectedCards),
+        offsets:   Array.from(selectedCards).map(c => ({
+          card: c,
+          ox: (e.clientX - wRect.left + wrap.scrollLeft) - (parseFloat(c.style.left) || 0),
+          oy: (e.clientY - wRect.top)                    - (parseFloat(c.style.top)  || 0),
+        }))
+      };
+      card.setPointerCapture(e.pointerId);
+      dragging.members.forEach(c => {
+        c.style.boxShadow = '0 2px 1px rgba(0,0,0,0.06), 0 8px 20px rgba(0,0,0,0.14)';
+        c.style.zIndex = ++zCounter;
+      });
+    }
+
+    function onCardDblClick() { editCard(this); }
+
+    function editCard(card) {
+      const t = prompt(
+        'Edit label  (tip: "# Bold" for heading; prefix a year with \\ to suppress its link)',
+        card.dataset.raw ?? card.textContent);
+      if (t !== null && t.trim()) { renderCard(card, t.trim()); updateConnectors(); }
+    }
+
+    // ── Canvas pointer events ─────────────────────────────────────────────
+    // Drag on timeline bar (±24px of tlY) → pan; everywhere else → marquee.
+    // Ctrl/Shift/Meta + drag anywhere → always marquee (even on timeline bar).
+    cvs.addEventListener('pointerdown', e => {
+      if (e.target.classList.contains('card')) return;
+      const wRect  = wrap.getBoundingClientRect();
+      const canvasY = e.clientY - wRect.top;
+      const onTimeline = Math.abs(canvasY - tlY) <= 24;
+      if (onTimeline && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+        panning = { startClientX: e.clientX, startScrollLeft: wrap.scrollLeft,
+                    pointerId: e.pointerId, moved: false };
+        cvs.setPointerCapture(e.pointerId);
+        cvs.style.cursor = 'grabbing';
+      } else {
+        const sx = e.clientX - wRect.left + wrap.scrollLeft;
+        const sy = canvasY;
+        marqState = { sx, sy, cx: sx, cy: sy, add: e.shiftKey || e.ctrlKey || e.metaKey };
+        marqEl.style.cssText = `left:${sx}px;top:${sy}px;width:0;height:0;display:none`;
+      }
+    });
+
+    cvs.addEventListener('pointermove', e => {
+      if (dragging) {
+        const wRect = wrap.getBoundingClientRect();
+        const px = e.clientX - wRect.left + wrap.scrollLeft;
+        const py = e.clientY - wRect.top;
+        dragging.offsets.forEach(info => {
+          let x = px - info.ox, y = py - info.oy;
+          if (snapChk.checked) { x = snapV(x); y = snapV(y); }
+          info.card.style.left = `${x}px`;
+          info.card.style.top  = `${y}px`;
+        });
+        updateConnectors();
+        return;
+      }
+      // Cursor feedback: show grab hand near timeline bar when idle
+      if (!dragging && !panning && !marqState) {
+        const wRect2 = wrap.getBoundingClientRect();
+        cvs.style.cursor = Math.abs(e.clientY - wRect2.top - tlY) <= 24 ? 'grab' : '';
+      }
+      if (panning) {
+        const dx = e.clientX - panning.startClientX;
+        if (Math.abs(dx) > 4) panning.moved = true;
+        wrap.scrollLeft = panning.startScrollLeft - dx;
+        return;
+      }
+      if (marqState) {
+        const wRect = wrap.getBoundingClientRect();
+        marqState.cx = e.clientX - wRect.left + wrap.scrollLeft;
+        marqState.cy = e.clientY - wRect.top;
+        if (Math.abs(marqState.cx - marqState.sx) < 8 && Math.abs(marqState.cy - marqState.sy) < 8) return;
+        marqEl.style.display = 'block';
+        const L = Math.min(marqState.sx, marqState.cx), T = Math.min(marqState.sy, marqState.cy);
+        marqEl.style.left   = `${L}px`; marqEl.style.top    = `${T}px`;
+        marqEl.style.width  = `${Math.abs(marqState.cx - marqState.sx)}px`;
+        marqEl.style.height = `${Math.abs(marqState.cy - marqState.sy)}px`;
+      }
+    });
+
+    ['pointerup', 'pointercancel'].forEach(evt =>
+      cvs.addEventListener(evt, () => {
+        if (dragging) {
+          try { dragging.anchor.releasePointerCapture(dragging.pointerId); } catch {}
+          dragging.members.forEach(c => c.style.boxShadow = '0 1px 0 rgba(0,0,0,0.06), 0 4px 10px rgba(0,0,0,0.06)');
+          dragging = null; updateConnectors();
+        }
+        if (panning) {
+          try { cvs.releasePointerCapture(panning.pointerId); } catch {}
+          cvs.style.cursor = '';
+          if (!panning.moved) clearSel();   // tap on timeline bar → deselect
+          panning = null;
+        }
+        if (marqState) {
+          marqEl.style.display = 'none';
+          const L = Math.min(marqState.sx, marqState.cx), T = Math.min(marqState.sy, marqState.cy);
+          const R = Math.max(marqState.sx, marqState.cx), B = Math.max(marqState.sy, marqState.cy);
+          const hit = [];
+          document.querySelectorAll('.card').forEach(c => {
+            const cx = parseFloat(c.style.left) || 0, cy = parseFloat(c.style.top) || 0;
+            if (!(cx + c.offsetWidth < L || cx > R || cy + c.offsetHeight < T || cy > B)) hit.push(c);
+          });
+          if (marqState.add) hit.forEach(addSel); else replaceSel(hit);
+          marqState = null;
+        }
+      })
+    );
+
+    // ── Keyboard ──────────────────────────────────────────────────────────
+    window.addEventListener('keydown', e => {
+      if ([entry, fromIn, toIn].includes(document.activeElement)) return;
+      const step = e.shiftKey ? GRID : 4;
+      switch (e.key) {
+        case 'Escape':
+          clearSel(); break;
+        case 'Delete': case 'Backspace':
+          if (selectedCards.size) {
+            selectedCards.forEach(c => c.remove()); selectedCards.clear(); updDelBtn();
+            updateConnectors(); e.preventDefault();
+          }
+          break;
+        case 'a': case 'A':
+          if (e.ctrlKey || e.metaKey) {
+            replaceSel(Array.from(document.querySelectorAll('.card'))); e.preventDefault();
+          }
+          break;
+        case 'ArrowLeft': case 'ArrowRight': case 'ArrowUp': case 'ArrowDown':
+          if (!selectedCards.size) return;
+          selectedCards.forEach(c => {
+            let l = parseFloat(c.style.left) || 0, t = parseFloat(c.style.top) || 0;
+            if (e.key === 'ArrowLeft')  l -= step;
+            if (e.key === 'ArrowRight') l += step;
+            if (e.key === 'ArrowUp')    t -= step;
+            if (e.key === 'ArrowDown')  t += step;
+            if (snapChk.checked) { l = snapV(l); t = snapV(t); }
+            c.style.left = `${l}px`; c.style.top = `${t}px`;
+          });
+          updateConnectors(); e.preventDefault();
+          break;
+      }
+    });
+
+    // ── Entry ─────────────────────────────────────────────────────────────
+    function addFromEntry() {
+      const items = splitInput(entry.value);
+      if (!items.length) return;
+      items.forEach(t => createCard(t));
+      entry.value = ''; entry.focus();
+    }
+    entry.addEventListener('keydown', e => { if (e.key === 'Enter') addFromEntry(); });
+    addBtn.addEventListener('click', addFromEntry);
+
+    // ── Export ────────────────────────────────────────────────────────────
+    exportBtn.addEventListener('click', () => {
+      const rows = [
+        ['__meta__', `from=${fromYear}`, `to=${toYear}`, `ppy=${ppy.toFixed(6)}`],
+        ['text', 'x', 'y']
+      ];
+      document.querySelectorAll('.card').forEach(c =>
+        rows.push([c.dataset.raw ?? c.textContent,
+                   Math.round(parseFloat(c.style.left) || 0),
+                   Math.round(parseFloat(c.style.top)  || 0)])
+      );
+      const csv  = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url  = URL.createObjectURL(blob);
+      const a    = Object.assign(document.createElement('a'), { href: url,
+        download: `timeline-${fromYear}-${toYear}-${new Date().toISOString().slice(0,10)}.csv` });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 500);
+    });
+
+    // ── Delete / Clear ────────────────────────────────────────────────────
+    deleteBtn.addEventListener('click', () => {
+      selectedCards.forEach(c => c.remove()); selectedCards.clear(); updDelBtn(); updateConnectors();
+    });
+    clearBtn.addEventListener('click', () => {
+      if (confirm('Remove all labels from the timeline?')) {
+        document.querySelectorAll('.card').forEach(c => c.remove());
+        clearSel(); updateConnectors();
+      }
+    });
+
+    // ── CSV ───────────────────────────────────────────────────────────────
+    function parseCSV(text) {
+      const rows = []; let row = [], cur = '', inQ = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (inQ) {
+          if (ch === '"') { if (text[i+1] === '"') { cur += '"'; i++; } else inQ = false; }
+          else cur += ch;
+        } else {
+          if      (ch === '"')  inQ = true;
+          else if (ch === ',')  { row.push(cur); cur = ''; }
+          else if (ch === '\r') {}
+          else if (ch === '\n') { row.push(cur); rows.push(row); row = []; cur = ''; }
+          else cur += ch;
+        }
+      }
+      row.push(cur); rows.push(row);
+      if (rows.length && rows[rows.length-1].join('') === '') rows.pop();
+      return rows;
+    }
+
+    function importCSVText(text) {
+      const raw = parseCSV(text);
+      if (!raw.length) { alert('No rows found.'); return; }
+
+      let si = 0, tIdx = -1, xIdx = -1, yIdx = -1;
+
+      if (raw[0]?.[0] === '__meta__') {
+        const meta = raw[0].join(',');
+        const fm = meta.match(/from=(-?\d+)/);
+        const tm = meta.match(/to=(-?\d+)/);
+        const pm = meta.match(/ppy=([\d.]+)/);
+        if (fm && tm) {
+          fromIn.value = fm[1]; toIn.value = tm[1];
+          // Apply range with the saved ppy so pixel positions are restored exactly
+          applyRange(+fm[1], +tm[1], pm ? parseFloat(pm[1]) : null);
+        }
+        si = 1;
+      }
+
+      if (raw[si]) {
+        const h = raw[si].map(s => s.trim().toLowerCase());
+        if (h.includes('text')) {
+          tIdx = h.indexOf('text'); xIdx = h.indexOf('x'); yIdx = h.indexOf('y'); si++;
+        }
+      }
+
+      const append = confirm('Import: OK to append, Cancel to replace current board.');
+      if (!append) { document.querySelectorAll('.card').forEach(c => c.remove()); clearSel(); }
+
+      for (let i = si; i < raw.length; i++) {
+        const r = raw[i]; if (!r) continue;
+        const t = (tIdx >= 0 ? r[tIdx] : r[0] ?? '').trim();
+        if (!t) continue;
+        const x = xIdx >= 0 ? parseFloat(r[xIdx]) : null;
+        const y = yIdx >= 0 ? parseFloat(r[yIdx]) : null;
+        createCard(t, isFinite(x) ? x : null, isFinite(y) ? y : null);
+      }
+    }
+
+    importBtn.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', e => {
+      const file = e.target.files?.[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => importCSVText(reader.result);
+      reader.readAsText(file); fileInput.value = '';
+    });
+    cvs.addEventListener('dragover', e => { if (e.dataTransfer?.types.includes('Files')) e.preventDefault(); });
+    cvs.addEventListener('drop', e => {
+      if (!e.dataTransfer?.files?.length) return;
+      e.preventDefault();
+      const file = e.dataTransfer.files[0];
+      if (!file.name.toLowerCase().endsWith('.csv')) { alert('Drop a .csv file to import.'); return; }
+      const reader = new FileReader(); reader.onload = () => importCSVText(reader.result);
+      reader.readAsText(file);
+    });
+
+    // ── Resize ────────────────────────────────────────────────────────────
+    window.addEventListener('resize', () => {
+      // Clamp zoom so we never show less than the full range
+      ppy = Math.max(ppy, fitPpy());
+      updateTimeline(); updateConnectors();
+    });
+
+    // ── Init ──────────────────────────────────────────────────────────────
+    fromIn.value = fromYear; toIn.value = toYear;
+    applyRange(fromYear, toYear); // sets ppy = fitPpy(), draws everything
+    entry.focus();
+  })();
+  </script>
+</body>
+</html>
