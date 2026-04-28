@@ -338,17 +338,26 @@
       const masked = text.replace(/\\(\d{2,4})/g, m => '\x00'.repeat(m.length));
       function inRange(yr) { return yr >= fromYear && yr <= toYear ? yr : null; }
 
-      // 0. Date range: 1600-1650  1600–1650  1600-50  1600 to 1650
+      // 0. Date range — full and abbreviated, many separator forms.
       //    Treated like a century: connector snaps to nearest tick within overlap.
-      const rangePats = [
-        /\b(\d{4})\s*(?:-|–|to)\s*(\d{4})\b/gi,   // full: 1600-1650 or 1600 to 1650
-        /\b(\d{4})\s*-\s*(\d{2})\b/g,               // abbreviated: 1600-50
+      //    SEP = hyphen, en-dash, em-dash, "to", "until"
+      //    Optional "from" prefix: "from 1939 to 1945"
+      //    Optional "c."/"ca." prefix on the start year
+      const SEP = '(?:-|–|—|\\bto\\b|\\buntil\\b)';
+      const APPROX = '(?:c\\.?a?\\.?\\s*)?';         // optional c./ca. prefix
+      const rangeRe = [
+        // Full 4+4: (from) (c.)YYYY SEP (c.)YYYY
+        new RegExp(
+          `(?:from\\s+)?${APPROX}\\b(\\d{4})\\s*${SEP}\\s*${APPROX}\\b(\\d{4})\\b`, 'gi'),
+        // Abbreviated 4+2: (from) (c.)YYYY SEP YY
+        new RegExp(
+          `(?:from\\s+)?${APPROX}\\b(\\d{4})\\s*(?:-|–|—|\\bto\\b|\\buntil\\b)\\s*(\\d{2})\\b`, 'gi'),
       ];
-      for (const pat of rangePats) {
-        for (const m of masked.matchAll(new RegExp(pat.source, pat.flags))) {
+      for (let ri = 0; ri < rangeRe.length; ri++) {
+        for (const m of masked.matchAll(rangeRe[ri])) {
           let rFrom = parseInt(m[1], 10);
           let rTo   = parseInt(m[2], 10);
-          if (pat.source.includes('\\d{2}')) {
+          if (ri === 1) {
             // Expand abbreviated end: 1600-50 → 1650
             rTo = Math.floor(rFrom / 100) * 100 + rTo;
             if (rTo < rFrom) rTo += 100;
@@ -525,7 +534,7 @@
         card.textContent = rawText.slice(1);
       } else {
         card.classList.remove('heading');
-        card.textContent = rawText;
+        card.textContent = rawText.replace(/\\(\d)/g, '$1');
       }
     }
 
