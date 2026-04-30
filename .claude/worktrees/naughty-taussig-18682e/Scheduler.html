@@ -496,31 +496,21 @@
                     const data = JSON.parse(ev.target.result);
                     updateStatusDisplay("Loaded", file.name);
 
-                    // Restore the exam schedule (room names, subjects, custom rooms)
-                    if (data.examSchedule) {
-                        examSchedule = data.examSchedule;
-                    }
-
                     if (data.staffData) {
                         data.staffData.forEach(importedStaff => {
                             if (!staffData.find(s => s.id === importedStaff.id)) {
-                                importedStaff.used = 0;
+                                importedStaff.used = 0; 
                                 staffData.push(importedStaff);
                             }
                         });
                     }
                     staffData.forEach(s => s.used = 0);
-
-                    // Rebuild rotaState from the restored examSchedule
-                    rotaState = {};
-                    examSchedule.forEach(exam => {
-                        rotaState[exam.id] = {};
-                        exam.reqPeriods.forEach(p => rotaState[exam.id][p] = null);
-                    });
-
+                    for (const examId in rotaState) { 
+                        for (const period in rotaState[examId]) rotaState[examId][period] = null; 
+                    }
                     if (data.rotaState) {
                         for (const examId in data.rotaState) {
-                            if (rotaState[examId]) {
+                            if (rotaState[examId]) { 
                                 for (const period in data.rotaState[examId]) {
                                     const staffId = data.rotaState[examId][period];
                                     if (staffId && rotaState[examId][period] !== undefined) {
@@ -539,8 +529,8 @@
                     alert("Error loading file.");
                 }
             };
-            reader.readAsText(file);
-            e.target.value = '';
+            reader.readAsText(file); 
+            e.target.value = ''; 
         }
 
         function renderGrid() {
