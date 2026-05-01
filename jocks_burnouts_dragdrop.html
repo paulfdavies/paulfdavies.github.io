@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Jocks vs Burnouts — High School Sort (Large + Mascots)</title>
+  <style>
+    /* --- US High School Theme (Accessible) --- */
+    :root{
+      /* Colours with higher contrast */
+      --bg:#f6f3ed;
+      --ink:#111827;            /* almost-black for card text */
+      --muted:#374151;          /* darker muted for readability */
+      --accent:#7a1122;         /* maroon (darker) */
+      --accent-2:#d89b04;       /* gold (darker for contrast on white) */
+      --accent-3:#0a2f78;       /* navy */
+      --good:#1b5e20;
+      --bad:#b71c1c;
+      --paper:#fffef8;
+      --line:#d9c8a6;
+      --locker:#1e293b;         /* slate for locker */
+      --locker-top:#0f172a;     /* darker top band */
+      --shadow:0 2px 2px rgba(0,0,0,.05), 0 8px 20px rgba(0,0,0,.14);
+
+      /* Sizing tuned for large classroom displays */
+      --base:24px;              /* increased again */
+      --h1:calc(var(--base) * 1.7);
+      --h2:calc(var(--base) * 1.35);
+      --card:calc(var(--base) * 1.1);
+      --button:calc(var(--base) * 0.95);
+    }
+    html,body{height:100%;}
+    body{margin:0;background:var(--bg);color:var(--ink);font:var(--base)/1.55 system-ui,-apple-system,Segoe UI,Roboto,Inter,Ubuntu,Helvetica,Arial,sans-serif;}
+
+    /* Varsity banner */
+    header.hero{position:relative; padding:1.1rem 1rem; color:#fff; background:linear-gradient(135deg,var(--accent) 0%, var(--accent-3) 100%); box-shadow:var(--shadow);}
+    header .toprow{display:flex;flex-wrap:wrap;align-items:center;gap:1rem;}
+    .crest{display:flex; align-items:center; gap:.9rem;}
+    .crest .shield{width:64px;height:64px;border-radius:10px; background:radial-gradient(circle at 30% 30%, #ffffff55 0 38%, transparent 39%), linear-gradient(135deg, var(--accent-2), #bb8300); border:3px solid #fff; box-shadow:0 3px 8px rgba(0,0,0,.25); display:grid; place-items:center; font-weight:900; letter-spacing:.5px;}
+    .crest .shield::after{content:'HS'; color:var(--accent); text-shadow:0 1px 0 #fff;}
+    h1{margin:.2rem 0 .1rem;font-size:var(--h1);font-weight:900;letter-spacing:.5px;text-transform:uppercase}
+    p.subtitle{margin:.25rem 0 0;color:#fffb}
+
+    .controls{display:flex;gap:.7rem;flex-wrap:wrap;margin:.8rem 0 1.1rem}
+    button{appearance:none;border:2px solid #fff;background:var(--accent-2);color:#2d2200;border-radius:12px;padding:.7rem 1.05rem;font-weight:800;cursor:pointer;box-shadow:var(--shadow);text-transform:uppercase;letter-spacing:.4px;font-size:var(--button)}
+    button.primary{background:#fff;color:var(--accent);border-color:var(--accent)}
+    select{font-size:var(--button);padding:.55rem .75rem;border-radius:10px;border:2px solid #e5e7eb;background:#fff;}
+
+    /* Board as lockers */
+    main{padding:1rem;max-width:1320px;margin:0 auto;}
+    .board{display:grid;grid-template-columns:1fr;gap:1.2rem}
+    @media(min-width:1100px){.board{grid-template-columns:1fr 1fr}}
+    .col{background:linear-gradient(var(--locker-top),var(--locker-top)) top/100% 64px no-repeat, var(--locker); border:2px solid #0b1220; border-radius:16px; box-shadow:var(--shadow); display:flex; flex-direction:column; min-height:420px; color:#e6edf7}
+    .col header{display:flex;align-items:center;gap:.75rem;border-bottom:2px solid #0b1220;padding:.9rem 1.1rem}
+    .col header h2{font-size:var(--h2);margin:0;font-weight:900;letter-spacing:.4px;text-transform:uppercase;display:flex;align-items:center;gap:.5rem}
+    .counts{margin-left:auto;color:#e5e7eb;font-size:calc(var(--base) * .95)}
+
+    /* Mascot icons inline with headings */
+    .mascot{width:36px;height:36px;display:inline-block}
+    .mascot svg{width:36px;height:36px;fill:#ffd166;stroke:#fff;stroke-width:1.2}
+
+    /* Drop zones and cards */
+    .dropzone{flex:1;display:grid;grid-template-columns:1fr;gap:.9rem;padding:1.1rem;min-height:300px}
+    .tray{background:#fff;border:2px dashed var(--line);border-radius:16px;box-shadow:var(--shadow);padding:1.1rem;margin-top:1.1rem}
+    .tray h3{margin:.2rem 0 .6rem;font-size:calc(var(--base) * 1.05);color:var(--muted)}
+    .tray-inner{display:grid;grid-template-columns:1fr;gap:.9rem}
+    @media(min-width:860px){.tray-inner{grid-template-columns:1fr 1fr}}
+
+    .card{background:repeating-linear-gradient( to bottom, var(--paper), var(--paper) 30px, #e8eefc 31px, var(--paper) 32px), linear-gradient( to right, #f7c5c5 0 54px, transparent 55px );
+          border:2px solid #cfbf9d;border-radius:14px;box-shadow:var(--shadow);padding:1.1rem 1.2rem 1.1rem 1.7rem;cursor:grab;user-select:none;position:relative;font-size:var(--card);
+          color:var(--ink) /* force dark text on cards for contrast */}
+    .card:active{cursor:grabbing}
+    .card .ref{display:block;margin-top:.55rem;font-size:calc(var(--base) * .85);color:#4b5563}
+    .dropzone.dragover{outline:3px dashed var(--accent-2);outline-offset:4px;background:#fff4cc}
+    .card.correct{border-color:var(--good);box-shadow:0 0 0 3px #1b5e2040 inset, var(--shadow)}
+    .card.wrong{border-color:var(--bad);box-shadow:0 0 0 3px #b71c1c40 inset, var(--shadow)}
+
+    .sr-only{position:absolute!important;height:1px;width:1px;overflow:hidden;clip:rect(1px, 1px, 1px, 1px);white-space:nowrap}
+    footer{padding:1rem;color:#475569;text-align:center;font-size:calc(var(--base) * .9)}
+    details.help{margin-top:.8rem}
+    code.kbd{background:#11182710;padding:.12rem .45rem;border-radius:6px;border:1px solid #00000012}
+  </style>
+</head>
+<body>
+  <header class="hero">
+    <div class="toprow">
+      <div class="crest">
+        <div class="shield" aria-hidden="true"></div>
+        <div>
+          <h1>Jocks vs Burnouts</h1>
+          <p class="subtitle">Classroom sorting activity — drag the index cards into the right locker column.</p>
+        </div>
+      </div>
+      <div style="margin-left:auto;display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
+        <label for="mascotSelect" class="sr-only">Mascot</label>
+        <select id="mascotSelect" aria-label="Choose mascot style">
+          <option value="tiger">Tigers</option>
+          <option value="eagle">Eagles</option>
+          <option value="bulldog">Bulldogs</option>
+          <option value="knight">Knights</option>
+        </select>
+        <button id="applyMascot">Apply Mascot</button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="controls">
+      <button id="shuffleBtn">Shuffle / Reset</button>
+      <button id="checkBtn" class="primary">Check answers</button>
+      <button id="showBtn">Show answers</button>
+      <button id="exportBtn">Export results (CSV)</button>
+    </div>
+
+    <section class="board" aria-label="Sorting board">
+      <article class="col" data-col="jocks" aria-labelledby="jocks-h">
+        <header>
+          <h2 id="jocks-h"><span class="mascot" id="m-j"></span> Jocks</h2>
+          <span class="counts" id="count-jocks">0</span>
+        </header>
+        <div class="dropzone" id="zone-jocks" role="list" aria-describedby="hint"></div>
+      </article>
+
+      <article class="col" data-col="burnouts" aria-labelledby="burnouts-h">
+        <header>
+          <h2 id="burnouts-h"><span class="mascot" id="m-b"></span> Burnouts</h2>
+          <span class="counts" id="count-burnouts">0</span>
+        </header>
+        <div class="dropzone" id="zone-burnouts" role="list" aria-describedby="hint"></div>
+      </article>
+    </section>
+
+    <section class="tray" aria-label="Unsorted slips">
+      <h3>Unsorted slips</h3>
+      <div class="tray-inner" id="tray" role="list"></div>
+      <p id="hint" class="sr-only">Drag a card to a column. On touch devices, tap a card to select, then tap a column to place it.</p>
+      <details class="help"><summary>Help & accessibility</summary>
+        <ul>
+          <li>Mouse/trackpad: drag and drop.</li>
+          <li>Touch: tap a card to select, then tap a column to place it.</li>
+          <li>Keyboard: <kbd class="kbd">Tab</kbd> to focus, then <kbd class="kbd">Enter</kbd> to cycle: Jocks → Burnouts → Tray.</li>
+        </ul>
+      </details>
+    </section>
+
+    <div aria-live="polite" class="sr-only" id="live"></div>
+  </main>
+
+  <footer>
+    <small>Content adapted from Eckert and related studies as summarized in the provided resource. This page runs completely offline.</small>
+  </footer>
+
+<script>
+(function(){
+  // ---- Data ----
+  const items = [
+    { id: 'i1', text: 'Embody middle-class culture and accept institutional school values.', answer: 'jocks', cite:'Eckert 1988, 2018' },
+    { id: 'i2', text: 'Embody working-class culture and reject school-based authority.', answer: 'burnouts', cite:'Eckert 1988, 2018' },
+    { id: 'i3', text: 'Oriented toward the school as a primary institution for social life.', answer: 'jocks', cite:'Eckert 1988' },
+    { id: 'i4', text: 'Oriented toward the local urban environment and the city.', answer: 'burnouts', cite:'Eckert 1988' },
+    { id: 'i5', text: 'Use language and behavior to prepare for professional adult roles.', answer: 'jocks', cite:'Eckert 1988' },
+    { id: 'i6', text: 'Use language and behavior to prepare for the manual workforce.', answer: 'burnouts', cite:'Eckert 1988, 2000' },
+    { id: 'i7', text: 'Display a marked preference for prestige or standard variants of English.', answer: 'jocks', cite:'Eckert 1997, 2009' },
+    { id: 'i8', text: 'Act as leaders in urban sound change and non-standard vernacular forms.', answer: 'burnouts', cite:'Eckert 1988, 2018' },
+    { id: 'i9', text: 'Seek local prestige through school-led activities like sports and clubs.', answer: 'jocks', cite:'Eckert 1988' },
+    { id: 'i10', text: 'Value "street culture," toughness, and independence from school status.', answer: 'burnouts', cite:'Cheshire 1982 (cited in Eckert 1997)' },
+    { id: 'i11', text: 'Align speech patterns with the overt norms of dominant social institutions.', answer: 'jocks', cite:'Eckert 2009, 2018' },
+    { id: 'i12', text: 'Signal an active refusal of the "institutional voice" through linguistic choices.', answer: 'burnouts', cite:'Eckert 2009, 2018' }
+  ];
+
+  const tray = document.getElementById('tray');
+  const zoneJ = document.getElementById('zone-jocks');
+  const zoneB = document.getElementById('zone-burnouts');
+  const counts = { jocks: document.getElementById('count-jocks'), burnouts: document.getElementById('count-burnouts') };
+  const live = document.getElementById('live');
+  const shuffleBtn = document.getElementById('shuffleBtn');
+  const checkBtn = document.getElementById('checkBtn');
+  const showBtn = document.getElementById('showBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const mascotSelect = document.getElementById('mascotSelect');
+  const applyMascot = document.getElementById('applyMascot');
+
+  let showMode = false;
+
+  function shuffle(array){ for(let i=array.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [array[i],array[j]]=[array[j],array[i]]; } }
+
+  function clearZones(){ [tray, zoneJ, zoneB].forEach(z=>z.innerHTML=''); document.querySelectorAll('.card').forEach(el=>el.classList.remove('correct','wrong')); updateCounts(); }
+
+  function updateCounts(){ counts.jocks.textContent = zoneJ.querySelectorAll('.card').length; counts.burnouts.textContent = zoneB.querySelectorAll('.card').length; }
+
+  function makeCard(it){
+    const el = document.createElement('div');
+    el.className = 'card'; el.setAttribute('role','listitem'); el.setAttribute('tabindex','0'); el.setAttribute('draggable','true');
+    el.dataset.id = it.id; el.dataset.answer = it.answer;
+    el.innerHTML = `<div class="text">${it.text}</div><span class="ref">${it.cite}</span>`;
+    el.addEventListener('dragstart', e=>{ e.dataTransfer.setData('text/plain', it.id); e.dataTransfer.effectAllowed = 'move'; });
+    el.addEventListener('keydown', e=>{ if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); cyclePlacement(el); } });
+    let selected = false;
+    el.addEventListener('touchstart', ()=>{ selected = !selected; el.style.outline = selected ? '3px solid var(--accent-2)' : ''; live.textContent = selected ? 'Card selected. Tap a column to place it.' : 'Card deselected.'; document.querySelectorAll('.dropzone').forEach(z=>{ z.onclick = selected ? ()=>{ z.appendChild(el); el.style.outline=''; selected=false; afterDrop(); } : null; }); });
+    return el;
+  }
+
+  function cyclePlacement(card){ const parent = card.parentElement; if(parent === tray){ zoneJ.appendChild(card); } else if(parent === zoneJ){ zoneB.appendChild(card); } else { tray.appendChild(card); } afterDrop(); }
+
+  function afterDrop(){ updateCounts(); if(showMode){ revealCorrectness(); } }
+
+  function setupDZ(zone){ zone.addEventListener('dragover', e=>{ e.preventDefault(); zone.classList.add('dragover'); }); zone.addEventListener('dragleave', ()=> zone.classList.remove('dragover')); zone.addEventListener('drop', e=>{ e.preventDefault(); const id = e.dataTransfer.getData('text/plain'); const card = document.querySelector(`.card[data-id="${id}"]`); if(card){ zone.appendChild(card); } zone.classList.remove('dragover'); afterDrop(); }); }
+
+  setupDZ(zoneJ); setupDZ(zoneB); setupDZ(tray);
+
+  function load(){ clearZones(); const copy = items.slice(); shuffle(copy); copy.forEach(it=> tray.appendChild(makeCard(it)) ); updateCounts(); showMode = false; showBtn.textContent = 'Show answers'; }
+
+  function check(){ let correct = 0; document.querySelectorAll('.card').forEach(card=>{ const parent = card.parentElement.id; const placed = parent.includes('jocks') ? 'jocks' : parent.includes('burnouts') ? 'burnouts' : null; if(placed){ if(placed === card.dataset.answer){ card.classList.add('correct'); card.classList.remove('wrong'); correct++; } else { card.classList.add('wrong'); card.classList.remove('correct'); } } else { card.classList.remove('correct','wrong'); } }); live.textContent = `You have ${correct} / ${items.length} correct.`; }
+
+  function revealCorrectness(){ document.querySelectorAll('.card').forEach(card=>{ if(card.dataset.answer === 'jocks') zoneJ.appendChild(card); else zoneB.appendChild(card); card.classList.remove('wrong'); card.classList.add('correct'); }); updateCounts(); }
+
+  function exportCSV(){ const rows = [['id','text','answer','placed']]; document.querySelectorAll('.card').forEach(card=>{ const txt = card.querySelector('.text').textContent.replaceAll('"','""'); const parent = card.parentElement.id; const placed = parent.includes('jocks') ? 'jocks' : parent.includes('burnouts') ? 'burnouts' : 'tray'; rows.push([card.dataset.id, txt, card.dataset.answer, placed]); }); const csv = rows.map(r=> r.map(x=>`"${x}`+`"`).join(',')).join('\n'); const blob = new Blob([csv],{type:'text/csv'}); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'jocks_burnouts_results.csv'; a.click(); URL.revokeObjectURL(a.href); }
+
+  // --- Mascot SVGs ---
+  const mascots = {
+    tiger: `<svg viewBox='0 0 64 64' aria-hidden='true'><path d='M32 8c12 0 22 8 22 18 0 8-6 14-14 16l3 7-7-5-4 5-4-5-7 5 3-7C16 40 10 34 10 26 10 16 20 8 32 8z'/></svg>`,
+    eagle: `<svg viewBox='0 0 64 64' aria-hidden='true'><path d='M8 40l20-8 12 4 16-8-8 14-10 6-12-2-10-6zM28 20l8-8 8 6-6 4-10-2z'/></svg>`,
+    bulldog: `<svg viewBox='0 0 64 64' aria-hidden='true'><path d='M14 28c0-8 7-14 18-14s18 6 18 14v8c0 8-7 14-18 14S14 44 14 36v-8zM22 30h6v6h-6zm14 0h6v6h-6z'/></svg>`,
+    knight: `<svg viewBox='0 0 64 64' aria-hidden='true'><path d='M20 44l8-20 16-8-6 16 6 12H20zM14 52h36v4H14z'/></svg>`
+  };
+
+  function setMascot(which){
+    const svg = mascots[which] || mascots.tiger;
+    document.getElementById('m-j').innerHTML = svg;
+    document.getElementById('m-b').innerHTML = svg;
+  }
+
+  applyMascot.addEventListener('click', ()=> setMascot(mascotSelect.value));
+  // default mascot
+  setMascot('tiger');
+
+  // init
+  shuffleBtn.addEventListener('click', load);
+  checkBtn.addEventListener('click', check);
+  showBtn.addEventListener('click', ()=>{ showMode = !showMode; if(showMode){ revealCorrectness(); live.textContent='Answers revealed.'; showBtn.textContent='Hide answers'; } else { load(); live.textContent='Answers hidden. Board reset.'; } });
+  exportBtn.addEventListener('click', exportCSV);
+  load();
+})();
+</script>
+</body>
+</html>
