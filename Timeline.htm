@@ -338,6 +338,19 @@
       const masked = text.replace(/\\(\d{2,4})/g, m => '\x00'.repeat(m.length));
       function inRange(yr) { return yr >= fromYear && yr <= toYear ? yr : null; }
 
+      // 0a. Range ending in "present/now": 1939–present  from 1939 to present
+      const SEP0 = '(?:-|–|—|\\bto\\b|\\buntil\\b)';
+      const APPROX0 = '(?:c\\.?a?\\.?\\s*)?';
+      const presentRe = new RegExp(
+        `(?:from\\s+)?${APPROX0}\\b(\\d{4})\\s*${SEP0}\\s*\\b(?:present|now|today)\\b`, 'gi');
+      for (const m of masked.matchAll(presentRe)) {
+        const rFrom = parseInt(m[1], 10);
+        const oFrom = Math.max(rFrom, fromYear);
+        if (oFrom > toYear) continue;
+        const yr = clamp(Math.floor(toYear / 10) * 10, oFrom, toYear);
+        return { year: yr, type: 'range', from: oFrom, to: toYear };
+      }
+
       // 0. Date range — full and abbreviated, many separator forms.
       //    Treated like a century: connector snaps to nearest tick within overlap.
       //    SEP = hyphen, en-dash, em-dash, "to", "until"
@@ -402,6 +415,17 @@
           return { year: null, type: 'ambiguous-decade', candidates: hits };
       }
 
+      // 3b. Apostrophe year: '68  '72  (specific year, century resolved by card position)
+      for (const m of masked.matchAll(/(?<!\d)'(\d{2})(?!s)\b/g)) {
+        const d = parseInt(m[1], 10);
+        const hits = [];
+        for (let c = 0; c <= 21; c++) { const yr = c * 100 + d; if (inRange(yr) !== null) hits.push(yr); }
+        if (hits.length === 1)
+          return { year: hits[0], type: 'exact', from: hits[0], to: hits[0] };
+        if (hits.length > 1)
+          return { year: null, type: 'ambiguous-decade', candidates: hits };
+      }
+
       // 4. Century: 16th c.  16th century  20th C  C20th  c.16th
       //    Pattern A: ordinal then century word  →  "16th c."  "20th century"
       //    Pattern B: C/c then ordinal           →  "C20th"  "c.16th"
@@ -420,6 +444,11 @@
           const yr = clamp(Math.floor(oTo / 10) * 10, oFrom, oTo);
           return { year: yr, type: 'century', from: oFrom, to: oTo };
         }
+      }
+
+      // 5. Standalone "present" / "to present"
+      if (/\bpresent\b/i.test(masked)) {
+        return { year: toYear, type: 'exact', from: toYear, to: toYear };
       }
 
       return null;
@@ -822,7 +851,31 @@
       return rows;
     }
 
-    function importCSVText(text) {
+    function importChoiceDialog() {
+      return new Promise(resolve => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.25);z-index:9999;display:flex;align-items:center;justify-content:center';
+        const box = document.createElement('div');
+        box.style.cssText = 'background:#fff;border-radius:10px;padding:24px 28px;box-shadow:0 8px 32px rgba(0,0,0,0.18);max-width:320px;width:90%;text-align:center;font-family:inherit';
+        box.innerHTML = `
+          <p style="margin:0 0 6px;font-size:1rem;font-weight:600">Import CSV</p>
+          <p style="margin:0 0 20px;font-size:0.875rem;color:#555">Add to existing labels, or replace them all?</p>
+          <div style="display:flex;gap:10px;justify-content:center">
+            <button id="_imp_append"  style="height:38px;padding:0 16px;border:1px solid #b7d2ff;background:#eaf3ff;border-radius:8px;font-size:14px;cursor:pointer">Append</button>
+            <button id="_imp_replace" style="height:38px;padding:0 16px;border:1px solid #cfd7e4;background:#f7f9fc;border-radius:8px;font-size:14px;cursor:pointer">Replace</button>
+            <button id="_imp_cancel"  style="height:38px;padding:0 16px;border:1px solid #cfd7e4;background:#f7f9fc;border-radius:8px;font-size:14px;cursor:pointer">Cancel</button>
+          </div>`;
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        const done = choice => { overlay.remove(); resolve(choice); };
+        box.querySelector('#_imp_append').onclick  = () => done('append');
+        box.querySelector('#_imp_replace').onclick = () => done('replace');
+        box.querySelector('#_imp_cancel').onclick  = () => done('cancel');
+        overlay.addEventListener('click', e => { if (e.target === overlay) done('cancel'); });
+      });
+    }
+
+    async function importCSVText(text) {
       const raw = parseCSV(text);
       if (!raw.length) { alert('No rows found.'); return; }
 
@@ -848,8 +901,9 @@
         }
       }
 
-      const append = confirm('Import: OK to append, Cancel to replace current board.');
-      if (!append) { document.querySelectorAll('.card').forEach(c => c.remove()); clearSel(); }
+      const choice = await importChoiceDialog();
+      if (choice === 'cancel') return;
+      if (choice === 'replace') { document.querySelectorAll('.card').forEach(c => c.remove()); clearSel(); }
 
       for (let i = si; i < raw.length; i++) {
         const r = raw[i]; if (!r) continue;
