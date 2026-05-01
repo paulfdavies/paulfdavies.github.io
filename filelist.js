@@ -16,7 +16,7 @@ const FILE_LIST = [
   { name: "Passives.html", modified: "2026-04-24" },
   { name: "PhonemicRevision.html", modified: "2026-04-24" },
   { name: "Reader.html", modified: "2026-04-24" },
-  { name: "Scheduler.html", modified: "2026-04-27" },
+  { name: "Scheduler.html", modified: "2026-04-30" },
   { name: "SchedulerMVP.html", modified: "2026-04-24" },
   { name: "SimpleCompoundComplexMinor.html", modified: "2026-04-24" },
   { name: "SpokLang.html", modified: "2026-04-24" },
