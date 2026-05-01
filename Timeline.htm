@@ -514,6 +514,7 @@
         dot.setAttribute('fill', '#999');
         connSvg.appendChild(dot);
       });
+      saveState();
     }
 
     // ── Range control ─────────────────────────────────────────────────────
@@ -932,6 +933,41 @@
       reader.readAsText(file);
     });
 
+    // ── Persistence ───────────────────────────────────────────────────────
+    const LS_KEY = 'timeline-v1';
+    let _saving = false;
+
+    function saveState() {
+      if (_saving) return;
+      const cards = [];
+      document.querySelectorAll('.card').forEach(c => {
+        cards.push({ raw: c.dataset.raw ?? c.textContent,
+                     x: parseFloat(c.style.left) || 0,
+                     y: parseFloat(c.style.top)  || 0 });
+      });
+      try {
+        localStorage.setItem(LS_KEY, JSON.stringify(
+          { fromYear, toYear, ppy, scrollLeft: wrap.scrollLeft, cards }));
+      } catch {}
+    }
+
+    function loadState() {
+      try {
+        const s = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+        if (!s) return false;
+        _saving = true;                          // suppress saves during restore
+        fromIn.value = s.fromYear; toIn.value = s.toYear;
+        applyRange(s.fromYear, s.toYear, s.ppy);
+        s.cards.forEach(c => createCard(c.raw, c.x, c.y));
+        requestAnimationFrame(() => { wrap.scrollLeft = s.scrollLeft || 0; });
+        _saving = false;
+        return true;
+      } catch { _saving = false; return false; }
+    }
+
+    // Save scroll position when panning (updateConnectors isn't called during pan)
+    wrap.addEventListener('scroll', saveState);
+
     // ── Resize ────────────────────────────────────────────────────────────
     window.addEventListener('resize', () => {
       // Clamp zoom so we never show less than the full range
@@ -941,7 +977,9 @@
 
     // ── Init ──────────────────────────────────────────────────────────────
     fromIn.value = fromYear; toIn.value = toYear;
-    applyRange(fromYear, toYear); // sets ppy = fitPpy(), draws everything
+    if (!loadState()) {
+      applyRange(fromYear, toYear); // sets ppy = fitPpy(), draws everything
+    }
     entry.focus();
   })();
   </script>
