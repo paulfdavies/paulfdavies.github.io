@@ -351,6 +351,25 @@
         return { year: yr, type: 'range', from: oFrom, to: toYear };
       }
 
+      // 0b. Decade-to-present: 90s-present  1990s-present  '90s to present
+      const decPresentRe = /(?:c\.?a?\.?\s*)?(?:\b(\d{4})'?s|(?<!\d)'?(\d{2})s)\b\s*(?:-|–|—|\bto\b|\buntil\b)\s*\b(?:present|now|today)\b/gi;
+      for (const m of masked.matchAll(decPresentRe)) {
+        let decStart;
+        if (m[1]) {
+          decStart = parseInt(m[1], 10);          // 4-digit decade: 1990s
+        } else {
+          const d = parseInt(m[2], 10);           // 2-digit decade: 90s
+          const hits = [];
+          for (let c = 0; c <= 21; c++) { const yr = c * 100 + d; if (inRange(yr) !== null) hits.push(yr); }
+          if (!hits.length) continue;
+          decStart = hits[hits.length - 1];       // use most recent in-range century
+        }
+        const oFrom = Math.max(decStart, fromYear);
+        if (oFrom > toYear) continue;
+        const yr = clamp(Math.floor(toYear / 10) * 10, oFrom, toYear);
+        return { year: yr, type: 'range', from: oFrom, to: toYear };
+      }
+
       // 0. Date range — full and abbreviated, many separator forms.
       //    Treated like a century: connector snaps to nearest tick within overlap.
       //    SEP = hyphen, en-dash, em-dash, "to", "until"
@@ -556,7 +575,7 @@
 
     function renderCard(card, rawText) {
       card.dataset.raw = rawText;
-      const strip = s => s.replace(/\\(\d)/g, '$1');
+      const strip = s => s.replace(/\\(\d)/g, '$1').replace(/\\,/g, ',');
       if (/^# /.test(rawText)) {
         card.classList.add('heading');
         card.textContent = strip(rawText.slice(2));
