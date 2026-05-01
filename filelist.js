@@ -27,6 +27,7 @@ const FILE_LIST = [
   { name: "VerbPrepositionGenerator.html", modified: "2026-04-24" },
   { name: "deep-time-lewes.html", modified: "2026-04-24" },
   { name: "icebreakers_random_question_deck_fixed.html", modified: "2026-04-24" },
+  { name: "jocks_burnouts_dragdrop.html", modified: "2026-05-01" },
   { name: "roman-numerals-weighted-reveal.html", modified: "2026-04-24" },
   { name: "slang_quiz_offline_auto.html", modified: "2026-04-24" },
   { name: "wordcount.html", modified: "2026-04-28" },
