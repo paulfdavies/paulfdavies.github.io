@@ -1,0 +1,97 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Phonological Processes Sorting Activity</title>
+<style>
+body { font-family: Arial, sans-serif; background:#f4f6f8; padding:20px; }
+h1 { text-align:center; }
+.controls { text-align:center; margin-bottom:15px; }
+button { padding:8px 14px; font-size:16px; cursor:pointer; }
+.board { display:flex; gap:20px; justify-content:space-between; }
+.column { background:#fff; border:2px solid #ccc; border-radius:8px; width:32%; padding:10px; min-height:500px; box-sizing:border-box; }
+.column h2 { text-align:center; margin-top:0; }
+.card { background:#e8f0fe; border:1px solid #90b4f8; border-radius:6px; padding:10px; margin:8px 0; cursor:grab; }
+.card.correct { background:#d4edda; border-color:#28a745; }
+.card.incorrect { background:#f8d7da; border-color:#dc3545; }
+.drag-over { background:#fff3cd; }
+</style>
+</head>
+<body>
+
+<h1>Phonological Processes Sorting</h1>
+<p style="text-align:center;">Drag each card into the category you think it belongs to, then click <strong>Check answers</strong>.</p>
+
+<div class="controls">
+    <button onclick="checkAnswers()">Check answers</button>
+</div>
+
+<div class="board">
+    <div class="column" data-category="substitution"><h2>Substitution processes</h2></div>
+    <div class="column" data-category="assimilatory"><h2>Assimilatory processes</h2></div>
+    <div class="column" data-category="syllable"><h2>Syllable structure processes</h2></div>
+</div>
+
+<div id="card-pool" style="display:none;">
+<div class="card" draggable="true" data-correct="substitution"><strong>Stopping</strong> A fricative or affricate consonant is replaced by a stop consonant. zoo → duː; chip → tɪp</div>
+<div class="card" draggable="true" data-correct="substitution"><strong>Fronting</strong> Back consonants are replaced with ones articulated further forward. shoe → suː; goat → dəʊt</div>
+<div class="card" draggable="true" data-correct="substitution"><strong>Gliding</strong> Liquids /l/ or /r/ are replaced by glides /w/ or /j/. leg → jeg; rabbit → wæbɪt</div>
+<div class="card" draggable="true" data-correct="substitution"><strong>Vocalization</strong> A vowel replaces a syllabic consonant. apple → æpo; bottom → bɒtu</div>
+
+<div class="card" draggable="true" data-correct="assimilatory"><strong>Consonant voicing</strong> Voiceless consonants become voiced. pet → bet; tiny → daɪni</div>
+<div class="card" draggable="true" data-correct="assimilatory"><strong>Consonant devoicing</strong> Final consonants become voiceless. pig → pɪk; toes → dəʊs</div>
+<div class="card" draggable="true" data-correct="assimilatory"><strong>Consonant harmony</strong> A consonant assimilates to another in the word. duck → gʌk; nipple → mɪpu</div>
+
+<div class="card" draggable="true" data-correct="syllable"><strong>Consonant cluster reduction</strong> Clusters are reduced to one consonant. snow → nəʊ</div>
+<div class="card" draggable="true" data-correct="syllable"><strong>Vowel epenthesis</strong> A vowel is added to break up a cluster. blue → bəlu</div>
+<div class="card" draggable="true" data-correct="syllable"><strong>Deletion of final consonants</strong> Final consonant is omitted. bike → baɪ</div>
+<div class="card" draggable="true" data-correct="syllable"><strong>Syllable deletion</strong> An unstressed syllable is deleted. banana → nɑːnə</div>
+<div class="card" draggable="true" data-correct="syllable"><strong>Reduplication</strong> A CV syllable is repeated. water → wɔːwɔː</div>
+</div>
+
+<script>
+let draggedCard = null;
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+const columns = document.querySelectorAll('.column');
+const pool = document.getElementById('card-pool');
+let cards = Array.from(pool.children);
+shuffle(cards);
+
+cards.forEach(card => columns[0].appendChild(card));
+
+cards.forEach(card => {
+    card.addEventListener('dragstart', () => draggedCard = card);
+});
+
+columns.forEach(column => {
+    column.addEventListener('dragover', e => { e.preventDefault(); column.classList.add('drag-over'); });
+    column.addEventListener('dragleave', () => column.classList.remove('drag-over'));
+    column.addEventListener('drop', () => {
+        column.classList.remove('drag-over');
+        if (draggedCard) column.appendChild(draggedCard);
+    });
+});
+
+function checkAnswers() {
+    document.querySelectorAll('.card').forEach(card => {
+        card.classList.remove('correct','incorrect');
+        const parentCategory = card.parentElement.getAttribute('data-category');
+        if (parentCategory === card.dataset.correct) {
+            card.classList.add('correct');
+        } else {
+            card.classList.add('incorrect');
+        }
+    });
+}
+</script>
+
+</body>
+</html>
