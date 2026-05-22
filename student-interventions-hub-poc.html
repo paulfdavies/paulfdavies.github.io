@@ -1,0 +1,962 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Student Interventions Hub — Proof of Concept</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg: #f5f4f0; --card: #ffffff; --surface: #f0efe9;
+  --border: rgba(0,0,0,0.1); --border-mid: rgba(0,0,0,0.18);
+  --text: #1a1a18; --text2: #5f5e5a; --text3: #888780;
+  --radius: 8px; --radius-lg: 12px; --radius-xl: 16px;
+  --teal: #0F6E56; --teal-bg: #E1F5EE; --teal-dark: #085041;
+  --blue-bg: #E6F1FB; --blue: #185FA5; --blue-dark: #0C447C;
+  --amber-bg: #FAEEDA; --amber: #BA7517; --amber-dark: #854F0B;
+  --coral-bg: #FAECE7; --coral-dark: #993C1D;
+  --purple-bg: #EEEDFE; --purple: #534AB7;
+  --red-bg: #FCEBEB; --red: #A32D2D; --red-dark: #791F1F;
+}
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg); min-height: 100vh;
+  padding: 1.5rem 1rem; color: var(--text); font-size: 14px; line-height: 1.5;
+}
+.poc-banner {
+  max-width: 1080px; margin: 0 auto 1rem;
+  background: var(--amber-bg); border: 0.5px solid rgba(186,117,23,0.3);
+  border-radius: var(--radius); padding: 0.5rem 1rem;
+  font-size: 12px; color: var(--amber-dark); font-weight: 500;
+  display: flex; align-items: center; gap: 6px;
+}
+.hub { max-width: 1080px; margin: 0 auto; background: var(--card); border-radius: var(--radius-xl); border: 0.5px solid var(--border); overflow: hidden; }
+.hub-header { background: var(--surface); border-bottom: 0.5px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+.hub-title { font-size: 15px; font-weight: 600; }
+.hub-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: #1D9E75; display: inline-block; margin-right: 6px; }
+.hub-body { display: flex; align-items: flex-start; }
+.hub-main { flex: 1; min-width: 0; padding: 1.25rem 1.5rem; border-right: 0.5px solid var(--border); }
+.hub-side { width: 280px; flex-shrink: 0; padding: 1.25rem; position: sticky; top: 20px; align-self: flex-start; }
+.search-row { display: flex; gap: 8px; margin-bottom: 1.25rem; }
+.search-row input { flex: 1; height: 38px; font-size: 13px; padding: 0 12px; border-radius: var(--radius); border: 0.5px solid var(--border-mid); background: var(--card); color: var(--text); outline: none; }
+.search-row input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(15,110,86,0.1); }
+.btn { height: 38px; padding: 0 14px; font-size: 13px; font-weight: 500; border-radius: var(--radius); border: 0.5px solid var(--border-mid); background: var(--surface); color: var(--text); cursor: pointer; white-space: nowrap; transition: background .1s; }
+.btn:hover { background: var(--bg); }
+.student-card { border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 1.25rem; display: none; }
+.student-card.vis { display: block; }
+.sc-head { padding: 1rem 1.25rem; display: flex; gap: 12px; align-items: flex-start; border-bottom: 0.5px solid var(--border); }
+.avatar { width: 42px; height: 42px; border-radius: 50%; background: var(--teal-bg); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600; color: var(--teal-dark); flex-shrink: 0; }
+.sname { font-size: 15px; font-weight: 600; }
+.smeta { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.sflags { display: flex; gap: 5px; margin-top: 6px; flex-wrap: wrap; }
+.flag { font-size: 11px; padding: 2px 7px; border-radius: 4px; font-weight: 500; }
+.fa { background: var(--amber-bg); color: var(--amber-dark); }
+.ft { background: var(--teal-bg); color: var(--teal-dark); }
+.fc { background: var(--coral-bg); color: var(--coral-dark); }
+.sc-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; padding: 0.75rem 1.25rem; }
+.stat-v { font-size: 22px; font-weight: 600; text-align: center; }
+.stat-v.warn { color: var(--amber); }
+.stat-v.danger { color: var(--red); }
+.stat-l { font-size: 11px; color: var(--text2); text-align: center; margin-top: 2px; }
+.sec-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 0.6rem; }
+.actions-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1.5rem; }
+.act-btn { display: flex; align-items: flex-start; gap: 10px; padding: 0.75rem 1rem; border: 0.5px solid var(--border-mid); border-radius: var(--radius-lg); background: var(--card); cursor: pointer; text-align: left; transition: background .1s; }
+.act-btn:hover { background: var(--surface); }
+.act-btn.wide { grid-column: span 2; align-items: center; }
+.act-icon { width: 32px; height: 32px; border-radius: var(--radius); display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+.i-teal { background: var(--teal-bg); color: var(--teal); }
+.i-blue { background: var(--blue-bg); color: var(--blue); }
+.i-amber { background: var(--amber-bg); color: var(--amber-dark); }
+.i-coral { background: var(--coral-bg); color: var(--coral-dark); }
+.i-purple { background: var(--purple-bg); color: var(--purple); }
+.abt { font-size: 13px; font-weight: 600; }
+.abs { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.log-section { display: none; }
+.log-section.vis { display: block; }
+.log-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+.save-btn { height: 32px; padding: 0 14px; font-size: 12px; font-weight: 600; border-radius: var(--radius); border: none; background: var(--teal); color: #fff; cursor: pointer; display: flex; align-items: center; gap: 6px; transition: background .1s; }
+.save-btn:hover { background: var(--teal-dark); }
+.log-compose { border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 0.75rem; }
+.type-row { display: flex; border-bottom: 0.5px solid var(--border); }
+.type-btn { flex: 1; padding: 0.55rem; font-size: 12px; font-weight: 500; border: none; border-right: 0.5px solid var(--border); background: transparent; cursor: pointer; color: var(--text2); display: flex; align-items: center; justify-content: center; gap: 4px; transition: background .1s; }
+.type-btn:last-child { border-right: none; }
+.type-btn.active { background: var(--surface); color: var(--text); }
+.type-btn:hover:not(.active) { background: var(--surface); }
+.note-row { display: flex; gap: 6px; padding: 0.6rem 0.75rem; }
+.note-row input { flex: 1; height: 34px; font-size: 12px; padding: 0 10px; border-radius: var(--radius); border: 0.5px solid var(--border-mid); background: var(--card); color: var(--text); outline: none; }
+.note-row input:focus { border-color: var(--teal); }
+.log-it-btn { height: 34px; padding: 0 14px; font-size: 12px; font-weight: 600; border-radius: var(--radius); border: 0.5px solid rgba(15,110,86,0.3); background: var(--teal-bg); color: var(--teal-dark); cursor: pointer; white-space: nowrap; transition: background .1s; }
+.log-it-btn:hover { background: var(--teal); color: #fff; }
+.log-entries { border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+.log-empty { padding: 1.25rem; text-align: center; font-size: 12px; color: var(--text3); }
+.log-entry { padding: 0.75rem 1rem; border-bottom: 0.5px solid var(--border); display: flex; gap: 10px; align-items: flex-start; }
+.log-entry:last-child { border-bottom: none; }
+.log-entry.committed { background: var(--surface); opacity: 0.72; }
+.entry-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+.entry-body { flex: 1; min-width: 0; }
+.entry-title { font-size: 13px; font-weight: 600; display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.committed-badge { font-size: 10px; font-weight: 500; padding: 1px 6px; border-radius: 3px; background: var(--teal-bg); color: var(--teal-dark); }
+.entry-note { font-size: 12px; color: var(--text2); margin-top: 3px; font-style: italic; }
+.entry-note-edit { width: 100%; margin-top: 4px; font-size: 12px; padding: 6px 8px; border-radius: var(--radius); border: 0.5px solid var(--border-mid); color: var(--text); resize: none; height: 52px; outline: none; font-family: inherit; font-style: italic; }
+.entry-note-edit:focus { border-color: var(--teal); }
+.entry-time { font-size: 11px; color: var(--text3); margin-top: 3px; }
+.entry-actions { display: flex; gap: 4px; flex-shrink: 0; margin-top: 1px; }
+.icon-btn { width: 26px; height: 26px; border-radius: 5px; border: 0.5px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 13px; color: var(--text2); transition: background .1s; }
+.icon-btn:hover { background: var(--bg); }
+.icon-btn.danger:hover { background: var(--red-bg); color: var(--red); border-color: rgba(163,45,45,0.2); }
+.icon-btn.confirm { background: var(--teal-bg); color: var(--teal); border-color: rgba(15,110,86,0.2); }
+.icon-btn.confirm:hover { background: var(--teal); color: #fff; }
+.no-student { padding: 2rem; text-align: center; color: var(--text2); font-size: 13px; }
+.no-student i { font-size: 28px; color: var(--text3); display: block; margin-bottom: .5rem; }
+.side-label { font-size: 11px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 0.75rem; }
+.pathway { display: flex; flex-direction: column; }
+.stage-row { display: flex; gap: 10px; align-items: flex-start; padding: 0.6rem 0.75rem; border-radius: var(--radius); border: 0.5px solid transparent; margin-bottom: 2px; transition: background .1s; }
+.stage-row:hover { background: var(--surface); }
+.stage-spine { display: flex; flex-direction: column; align-items: center; flex-shrink: 0; }
+.stage-dot { width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 600; flex-shrink: 0; border: 0.5px solid transparent; }
+.stage-line { width: 1px; flex: 1; min-height: 10px; margin: 3px 0; background: var(--border-mid); }
+.stage-body { flex: 1; min-width: 0; padding-top: 2px; }
+.stage-name { font-size: 12px; font-weight: 600; color: var(--text); }
+.stage-tag { font-size: 10px; color: var(--text2); margin-top: 1px; line-height: 1.4; }
+.pm-link { font-size: 10px; color: var(--blue); text-decoration: none; display: inline-flex; align-items: center; gap: 2px; margin-top: 4px; }
+.pm-link:hover { text-decoration: underline; }
+.current-badge { font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px; margin-left: 4px; vertical-align: middle; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(80px); background: #1a1a18; color: #fff; padding: 10px 18px; border-radius: var(--radius); font-size: 13px; font-weight: 500; transition: transform .2s ease; pointer-events: none; z-index: 100; display: flex; align-items: center; gap: 10px; }
+.toast.success { background: var(--teal-dark); }
+.toast.show { transform: translateX(-50%) translateY(0); }
+.undo-link { color: #9FE1CB; text-decoration: underline; cursor: pointer; pointer-events: all; font-size: 12px; }
+.load-btn { height: 30px; padding: 0 10px; font-size: 12px; font-weight: 500; border-radius: var(--radius); border: 0.5px solid var(--border-mid); background: var(--surface); color: var(--text2); cursor: pointer; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: background .1s; }
+.load-btn:hover { background: var(--bg); color: var(--text); }
+.data-status { font-size: 11px; color: var(--text3); display: flex; align-items: center; gap: 4px; }
+.data-status.loaded { color: var(--teal); }
+.not-found-msg { padding: 1.5rem; text-align: center; font-size: 13px; color: var(--text2); border: 0.5px dashed var(--border-mid); border-radius: var(--radius-lg); margin-bottom: 1rem; }
+.sc-subjects { border-top: 0.5px solid var(--border); padding: 0.6rem 1.25rem; display: flex; flex-direction: column; gap: 3px; }
+.subj-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.subj-name { flex: 1; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.subj-risk { font-size: 10px; font-weight: 600; padding: 1px 6px; border-radius: 3px; white-space: nowrap; flex-shrink: 0; }
+.sr-high    { background: var(--coral-bg);  color: var(--coral-dark); }
+.sr-med     { background: var(--amber-bg);  color: var(--amber-dark); }
+.sr-out     { background: var(--teal-bg);   color: var(--teal-dark);  }
+.sr-none    { color: var(--text3); font-weight: 400; }
+.contact-popover { position: absolute; z-index: 50; background: var(--card); border: 0.5px solid var(--border-mid); border-radius: var(--radius-lg); box-shadow: 0 4px 16px rgba(0,0,0,0.12); padding: 0.5rem; min-width: 260px; display: none; }
+.contact-popover.open { display: block; }
+.contact-popover-head { font-size: 10px; font-weight: 600; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; padding: 4px 8px 6px; }
+.contact-num { display: flex; align-items: center; gap: 10px; padding: 0.5rem 0.6rem; border-radius: var(--radius); text-decoration: none; color: var(--text); transition: background .1s; cursor: pointer; }
+.contact-num:hover { background: var(--surface); }
+.contact-num-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+.contact-num-label { font-size: 12px; font-weight: 600; flex: 1; }
+.contact-num-sub { font-size: 11px; color: var(--text2); margin-top: 1px; }
+.contact-num-arrow { font-size: 11px; color: var(--text3); }
+.contact-divider { height: 0.5px; background: var(--border); margin: 4px 0; }
+.contact-none { font-size: 12px; color: var(--text3); padding: 0.5rem 0.6rem; text-align: center; }
+.call-wrap { position: relative; width: 100%; }
+.call-wrap .act-btn { width: 100%; }
+</style>
+</head>
+<body>
+
+<div class="poc-banner">
+  <i class="ti ti-flask" style="font-size:14px"></i>
+  Proof of concept &mdash; East Sussex College Group &middot; Student Interventions Hub &middot; All student data in this demo is fictional.
+</div>
+
+<div class="hub">
+  <div class="hub-header">
+    <div>
+      <div class="hub-title"><span class="status-dot"></span>Student Interventions Hub</div>
+      <div class="hub-sub">Pastoral contact, logging &amp; quick access &mdash; Lewes Campus</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="data-status" id="data-status">
+        <i class="ti ti-database" style="font-size:12px"></i>
+        <span id="data-status-text">Demo data</span>
+      </div>
+      <label class="load-btn" title="Load ProMonitor risk indicators XLSX">
+        <i class="ti ti-upload" style="font-size:12px"></i>Load data
+        <input type="file" accept=".xlsx" style="display:none" onchange="handleFileLoad(this)">
+      </label>
+      <div style="font-size:12px;color:var(--text2)">
+        <i class="ti ti-user" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>P. Davies
+      </div>
+    </div>
+  </div>
+
+  <div class="hub-body">
+    <div class="hub-main">
+
+      <div class="search-row">
+        <input type="text" id="search-input" placeholder="Student name or ID number&hellip;" onkeydown="if(event.key==='Enter')doSearch()">
+        <button class="btn" id="search-btn" onclick="doSearch()"><i class="ti ti-search" style="font-size:13px;vertical-align:-2px;margin-right:4px"></i>Look up</button>
+        <button class="btn" onclick="clearStudent()">Clear</button>
+      </div>
+
+      <div class="student-card" id="student-card">
+        <div class="sc-head">
+          <div class="avatar" id="avatar">AJ</div>
+          <div>
+            <div class="sname" id="s-name">&mdash;</div>
+            <div class="smeta" id="s-meta">&mdash;</div>
+            <div class="sflags" id="s-flags"></div>
+          </div>
+        </div>
+        <div class="sc-stats">
+          <div><div class="stat-v" id="s-att">&mdash;</div><div class="stat-l">Attendance</div></div>
+          <div><div class="stat-v" id="s-target">&mdash;</div><div class="stat-l">Target grade</div></div>
+          <div><div class="stat-v" id="s-concerns">&mdash;</div><div class="stat-l">Open concerns</div></div>
+        </div>
+        <div class="sc-subjects" id="sc-subjects" style="display:none"></div>
+      </div>
+
+      <div id="actions-section" style="display:none">
+        <div class="sec-label">Contact &amp; record</div>
+        <div class="actions-grid">
+          <button class="act-btn wide" onclick="openProMonitor()">
+            <div class="act-icon i-teal"><i class="ti ti-clipboard-list"></i></div>
+            <div><div class="abt">Open ProMonitor record</div><div class="abs">Student landing page — concerns, targets, notes</div></div>
+            <i class="ti ti-external-link" style="font-size:13px;color:var(--text3);margin-left:auto"></i>
+          </button>
+          <div class="call-wrap">
+            <button class="act-btn" onclick="toggleContactPopover(event)">
+              <div class="act-icon i-blue"><i class="ti ti-phone"></i></div>
+              <div><div class="abt">Call student</div><div class="abs">Choose number</div></div>
+              <i class="ti ti-chevron-down" style="font-size:11px;color:var(--text3);margin-left:auto" id="call-chevron"></i>
+            </button>
+            <div class="contact-popover" id="contact-popover"></div>
+          </div>
+          <button class="act-btn" onclick="emailStudent()">
+            <div class="act-icon i-purple"><i class="ti ti-mail"></i></div>
+            <div><div class="abt">Email student</div><div class="abs">Opens in Outlook</div></div>
+          </button>
+          <button class="act-btn" onclick="openAttendance()">
+            <div class="act-icon i-amber"><i class="ti ti-calendar-stats"></i></div>
+            <div><div class="abt">View attendance</div><div class="abs">ProSolution register</div></div>
+          </button>
+          <button class="act-btn" onclick="openMeetings()">
+            <div class="act-icon i-blue"><i class="ti ti-clipboard-text"></i></div>
+            <div><div class="abt">ProMonitor meetings</div><div class="abs">ALIPs &amp; formal interventions</div></div>
+            <i class="ti ti-external-link" style="font-size:13px;color:var(--text3);margin-left:auto"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="log-section" id="log-section">
+        <div class="log-head">
+          <div class="sec-label" style="margin-bottom:0">My action log &mdash; <span style="text-transform:none;letter-spacing:0;font-weight:400">private to you</span></div>
+          <button class="save-btn" onclick="saveToSharedLog()">
+            <i class="ti ti-send" style="font-size:13px"></i>Save to shared log
+          </button>
+        </div>
+
+        <div class="log-compose">
+          <div class="type-row">
+            <button class="type-btn active" onclick="setType(this,'Phone call')"><i class="ti ti-phone" style="font-size:12px"></i>Call</button>
+            <button class="type-btn" onclick="setType(this,'Email')"><i class="ti ti-mail" style="font-size:12px"></i>Email</button>
+            <button class="type-btn" onclick="setType(this,'Meeting')"><i class="ti ti-users" style="font-size:12px"></i>Meeting</button>
+            <button class="type-btn" onclick="setType(this,'Note')"><i class="ti ti-notes" style="font-size:12px"></i>Note</button>
+          </div>
+          <div class="note-row">
+            <input type="text" id="log-note" placeholder="Optional note (e.g. left voicemail, agreed targets&hellip;)" onkeydown="if(event.key==='Enter')manualLog()">
+            <button class="log-it-btn" onclick="manualLog()">Log it</button>
+          </div>
+        </div>
+
+        <div class="log-entries" id="log-entries"></div>
+      </div>
+
+      <div class="no-student" id="no-student">
+        <i class="ti ti-search"></i>
+        Search for a student above to see contact options and your action log.<br>
+        <span style="font-size:11px;color:var(--text3)">Try 567890 or any name &mdash; demo uses fictional data.</span>
+      </div>
+    </div>
+
+    <div class="hub-side">
+      <div class="side-label">Intervention pathway</div>
+      <div class="pathway" id="pathway"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">
+  <span id="toast-msg"></span>
+  <span class="undo-link" id="undo-link" style="display:none" onclick="undoDelete()">Undo</span>
+</div>
+
+<script>
+// ─── Config ───────────────────────────────────────────────────────────────────
+// After deploying the GAS script, paste the web app URL below.
+// Leave empty to run in demo/offline mode with the manual file loader.
+var GAS_ENDPOINT  = 'https://script.google.com/a/macros/escg.ac.uk/s/AKfycbxNUmYFqGbJY_YfWycv6dbaG96agcdMJHae8GUPfJpXYbo8SsvNmS0JSRlKm_YSlTXE/exec';
+var STAFF_NAME    = 'P. Davies'; // your name — written into shared log entries
+
+// Auto-updated from data on load; fallback used in demo mode.
+var ACADEMIC_YEAR = '2526';
+var PM_BASE       = 'https://prosolution.escg.ac.uk/Promonitor/Ilp/';
+var EMAIL_DOMAIN  = '@escg.ac.uk';
+
+// ─── State ────────────────────────────────────────────────────────────────────
+var logs = [], currentType = 'Phone call', editingId = null;
+var lastDeleted = null, lastDeletedIndex = null;
+var toastTimer, undoTimer, nextId = 1;
+var currentStudent = null;
+
+// ─── XLSX data store ──────────────────────────────────────────────────────────
+var studentMap  = {};
+var studentList = [];
+var dataLoaded  = false;
+
+// ─── Mock fallback data (fictional — used when no XLSX loaded) ─────────────────
+var mockStudents = {
+  '567890': { name:'Amara Johal', id:'567890', initials:'AJ',
+    courses:['A Level English Language','A Level Psychology','A Level Sociology'],
+    subjectRisks:[
+      {title:'A Level English Language', risk:'High Risk'},
+      {title:'A Level Psychology',       risk:'Medium Risk'},
+      {title:'A Level Sociology',        risk:'No Risk'}
+    ],
+    att:'71%', attWarn:true, target:'—', concerns:2, concernLevel:'danger',
+    flags:['High Risk · 1 subject','Medium Risk · 1 subject'], flagTypes:['fc','fa'],
+    stage:'stage1', pmId:'abc123', pmRiskUrl:'#', pmInfoUrl:'#',
+    pmMeetingsUrl:'#', pmActionsUrl:'#',
+    contacts: {
+      studentMobile: '07700 900 111',
+      homeLandline:  '01273 000 100',
+      parents: [
+        { name: 'Priya Johal (mother)', phone: '07700 900 222' },
+        { name: 'Raj Johal (father)',   phone: '07700 900 333' }
+      ]
+    }
+  },
+  'default': { name:'Jordan Mistry', id:'572384', initials:'JM',
+    courses:['BTEC Business Extended Diploma'],
+    subjectRisks:[
+      {title:'BTEC Business Extended Diploma', risk:'Outstanding Performance'}
+    ],
+    att:'88%', attWarn:false, target:'—', concerns:0, concernLevel:'',
+    flags:['Outstanding Performance'], flagTypes:['ft'],
+    stage:'stage0', pmId:'', pmRiskUrl:'#', pmInfoUrl:'#',
+    pmMeetingsUrl:'#', pmActionsUrl:'#',
+    contacts: {
+      studentMobile: '07700 900 444',
+      homeLandline:  null,
+      parents: [
+        { name: 'Sam Mistry (parent)', phone: '07700 900 555' }
+      ]
+    }
+  }
+};
+
+// ─── Auto-load student data from GAS ─────────────────────────────────────────
+function loadStudentData() {
+  setSearchState('loading');
+  fetch(GAS_ENDPOINT + '?action=students')
+    .then(function(r) {
+      if (!r.ok) throw new Error('Server returned ' + r.status);
+      return r.json();
+    })
+    .then(function(data) {
+      if (data.error) throw new Error(data.error);
+      processRows(data.rows, 'ProMonitor Risk Indicators');
+      setSearchState('ready');
+    })
+    .catch(function(err) {
+      setSearchState('error');
+      showToast('Could not load student data — ' + err.message, false);
+      // Fall back to demo mode so the hub is still usable
+      var el = document.getElementById('data-status');
+      el.className = 'data-status';
+      document.getElementById('data-status-text').textContent = 'Load failed — demo mode';
+    });
+}
+
+function setSearchState(state) {
+  var input = document.getElementById('search-input');
+  var btn   = document.getElementById('search-btn');
+  var el    = document.getElementById('data-status');
+  if (state === 'loading') {
+    input.disabled = true;
+    input.placeholder = 'Loading student data\u2026';
+    btn.disabled = true;
+    el.className = 'data-status';
+    document.getElementById('data-status-text').textContent = 'Loading\u2026';
+  } else if (state === 'ready') {
+    input.disabled = false;
+    input.placeholder = 'Student name or ID number\u2026';
+    btn.disabled = false;
+  } else if (state === 'error') {
+    input.disabled = false;
+    input.placeholder = 'Student name or ID number\u2026';
+    btn.disabled = false;
+  }
+}
+function handleFileLoad(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      var data = new Uint8Array(e.target.result);
+      var wb   = XLSX.read(data, { type: 'array' });
+      var ws   = wb.Sheets[wb.SheetNames[0]];
+      var rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+      processRows(rows, file.name);
+    } catch(err) {
+      showToast('Could not read file: ' + err.message, false);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  input.value = '';
+}
+
+// ─── Row aggregation ──────────────────────────────────────────────────────────
+// Students have one row per subject (typically 3 A levels).
+// We group by Studentid and aggregate attendance, risk flags, and course titles.
+function processRows(rows, filename) {
+  studentMap  = {};
+  studentList = [];
+
+  // Derive academic year from first row's Academicyearid ("25/26" → "2526")
+  if (rows.length) {
+    var rawYear = String(rows[0].Academicyearid || '').trim();
+    var parsed  = rawYear.replace('/', '');
+    if (/^\d{4}$/.test(parsed)) ACADEMIC_YEAR = parsed;
+  }
+
+  // Group rows by Studentid
+  var groups = {};
+  var order  = []; // preserve first-seen order
+  rows.forEach(function(r) {
+    var id = String(r.Studentid || '').trim();
+    if (!id) return;
+    if (!groups[id]) { groups[id] = []; order.push(id); }
+    groups[id].push(r);
+  });
+
+  order.forEach(function(id) {
+    var grp  = groups[id];
+    var first = grp[0];
+    var name  = String(first.Studentname || '').trim();
+    if (!name) return;
+
+    // ── Attendance: average across subjects (already a two-figure rounded %)
+    var attVals = grp
+      .map(function(r) { return parseAttendance(r.Avgattendance); })
+      .filter(function(v) { return v !== null; });
+    var attAvg  = attVals.length
+      ? Math.round(attVals.reduce(function(a,b){return a+b;},0) / attVals.length)
+      : null;
+    var attStr  = attAvg !== null ? attAvg + '%' : '—';
+    var attWarn = attAvg !== null && attAvg < 90;
+
+    // ── Courses: unique Studentgrouptitle values
+    var courses = [];
+    grp.forEach(function(r) {
+      var c = String(r.Studentgrouptitle || '').trim();
+      if (c && courses.indexOf(c) === -1) courses.push(c);
+    });
+
+    // ── Per-subject risk breakdown (shown in student card)
+    var subjectRisks = grp.map(function(r) {
+      return {
+        title: String(r.Studentgrouptitle || '').trim(),
+        risk:  String(r.Enrolmentatriskstatus || '').trim() || 'No Risk'
+      };
+    });
+
+    // ── Risk: tally each subject's status into counts by level
+    var riskCounts = { 'High Risk': 0, 'Medium Risk': 0, 'No Risk': 0, 'Outstanding Performance': 0, 'Unknown': 0 };
+    grp.forEach(function(r) {
+      var rs = String(r.Enrolmentatriskstatus || '').trim();
+      if (riskCounts.hasOwnProperty(rs)) { riskCounts[rs]++; }
+      else if (rs) { riskCounts['Unknown']++; }
+    });
+
+    var flags        = buildFlags(riskCounts, grp.length);
+    var concerns     = riskCounts['High Risk'] + riskCounts['Medium Risk'];
+    var concernLevel = riskCounts['High Risk'] > 0 ? 'danger' : (riskCounts['Medium Risk'] > 0 ? 'warn' : '');
+
+    // ── ProMonitor URLs — derived from pmstudentid in Riskindicatorspage column
+    // All rows for a student share the same pmstudentid; take first populated URL
+    var pmRiskUrl = '';
+    for (var i = 0; i < grp.length; i++) {
+      var u = String(grp[i].Riskindicatorspage || '').trim();
+      if (u) { pmRiskUrl = u; break; }
+    }
+    var pmId          = extractPmId(pmRiskUrl);
+    var pmInfoUrl     = pmId ? PM_BASE + 'information/details.aspx?academicyearid=' + ACADEMIC_YEAR + '&pmstudentid=' + pmId : '';
+    var pmMeetingsUrl = pmId ? PM_BASE + 'meetingscomments/meetings.aspx?academicyearid=' + ACADEMIC_YEAR + '&pmstudentid=' + pmId : '';
+
+    var pmActionsUrl  = pmId ? PM_BASE + 'meetingscomments/actions.aspx?academicyearid='  + ACADEMIC_YEAR + '&pmstudentid=' + pmId : '';
+
+    // ── Stage: placeholder until meetings report is integrated.
+    var stage = concerns > 0 ? 'informal' : null;
+
+    studentMap[id] = {
+      name: name, id: id, initials: getInitials(name),
+      courses: courses, subjectRisks: subjectRisks,
+      att: attStr, attWarn: attWarn,
+      target: '—',
+      concerns: concerns, concernLevel: concernLevel,
+      flags: flags.labels, flagTypes: flags.types,
+      stage: stage,
+      pmId: pmId, pmRiskUrl: pmRiskUrl, pmInfoUrl: pmInfoUrl,
+      pmMeetingsUrl: pmMeetingsUrl, pmActionsUrl: pmActionsUrl
+    };
+    studentList.push(studentMap[id]);
+  });
+
+  dataLoaded = true;
+  var el = document.getElementById('data-status');
+  el.className = 'data-status loaded';
+  document.getElementById('data-status-text').textContent =
+    studentList.length + ' students · ' + filename.replace(/^.*[\\/]/, '');
+  showToast(studentList.length + ' students loaded', false);
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function parseAttendance(val) {
+  // Handles: integer 71, decimal 0.71, string "71", string "71%"
+  if (val === null || val === undefined || val === '') return null;
+  if (typeof val === 'number') return val > 1 ? val : val * 100; // normalise to 0-100
+  var s = String(val).replace('%', '').trim();
+  var n = parseFloat(s);
+  if (isNaN(n)) return null;
+  return n > 1 ? n : n * 100; // store as 0-100 integer
+}
+// Note: parseAttendance now returns 0-100 (not 0-1) — attAvg can be used directly as %
+
+function extractPmId(url) {
+  if (!url) return '';
+  var m = url.match(/pmstudentid=([^&\s]+)/i);
+  return m ? m[1] : '';
+}
+
+function getInitials(name) {
+  var parts = name.trim().split(/\s+/);
+  if (!parts.length) return '??';
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// ─── Flag derivation — exact ProMonitor status vocabulary ─────────────────────
+function buildFlags(riskCounts, totalSubjects) {
+  var labels = [], types = [];
+  var multi  = totalSubjects > 1;
+
+  function subjectSuffix(n) {
+    return multi ? ' · ' + n + (n === 1 ? ' subject' : ' subjects') : '';
+  }
+
+  var high = riskCounts['High Risk']             || 0;
+  var med  = riskCounts['Medium Risk']           || 0;
+  var out  = riskCounts['Outstanding Performance'] || 0;
+  var unk  = riskCounts['Unknown']               || 0;
+
+  if (high) { labels.push('High Risk' + subjectSuffix(high));              types.push('fc'); } // coral/red
+  if (med)  { labels.push('Medium Risk' + subjectSuffix(med));             types.push('fa'); } // amber
+  if (out)  { labels.push('Outstanding Performance' + subjectSuffix(out)); types.push('ft'); } // teal
+  if (unk)  { labels.push('At risk · ' + unk + ' subject(s)');             types.push('fa'); } // fallback
+
+  return { labels, types };
+}
+
+// ─── Action handlers ──────────────────────────────────────────────────────────
+function openProMonitor() {
+  var url = currentStudent && currentStudent.pmInfoUrl ? currentStudent.pmInfoUrl
+          : currentStudent && currentStudent.pmRiskUrl ? currentStudent.pmRiskUrl
+          : null;
+  if (url && url !== '#') window.open(url, '_blank');
+  autoLog('ProMonitor', 'Opened ProMonitor record');
+}
+
+function openMeetings() {
+  var url = currentStudent && currentStudent.pmMeetingsUrl;
+  if (url && url !== '#') window.open(url, '_blank');
+  autoLog('ProMonitor', 'Opened meetings log');
+}
+
+function emailStudent() {
+  var id = currentStudent ? currentStudent.id : null;
+  if (id) window.open('mailto:' + id + EMAIL_DOMAIN, '_blank');
+  autoLog('Email', 'Opened email to student');
+}
+
+// ─── Contact popover ──────────────────────────────────────────────────────────
+var popoverOpen = false;
+
+function toggleContactPopover(e) {
+  e.stopPropagation();
+  var pop = document.getElementById('contact-popover');
+  if (popoverOpen) { closeContactPopover(); return; }
+  renderContactPopover();
+  pop.classList.add('open');
+  popoverOpen = true;
+  document.getElementById('call-chevron').style.transform = 'rotate(180deg)';
+}
+
+function closeContactPopover() {
+  var pop = document.getElementById('contact-popover');
+  if (!pop) return;
+  pop.classList.remove('open');
+  popoverOpen = false;
+  var chev = document.getElementById('call-chevron');
+  if (chev) chev.style.transform = '';
+}
+
+function renderContactPopover() {
+  var pop  = document.getElementById('contact-popover');
+  var c    = currentStudent && currentStudent.contacts;
+  if (!c) {
+    pop.innerHTML = '<div class="contact-none">No contact details loaded</div>';
+    return;
+  }
+
+  var rows = [];
+
+  if (c.studentMobile) {
+    rows.push(contactRow('ti-device-mobile', 'i-blue', 'Student mobile', c.studentMobile));
+  }
+  if (c.homeLandline) {
+    if (rows.length) rows.push('<div class="contact-divider"></div>');
+    rows.push(contactRow('ti-home', 'i-teal', 'Home', c.homeLandline));
+  }
+  if (c.parents && c.parents.length) {
+    if (rows.length) rows.push('<div class="contact-divider"></div>');
+    c.parents.forEach(function(p) {
+      if (p.phone) rows.push(contactRow('ti-user', 'i-amber', p.name, p.phone));
+    });
+  }
+
+  if (!rows.length) {
+    pop.innerHTML = '<div class="contact-none">No numbers available</div>';
+    return;
+  }
+
+  pop.innerHTML =
+    '<div class="contact-popover-head">Call via Teams</div>' +
+    rows.join('');
+}
+
+function contactRow(icon, colorClass, label, number) {
+  // tel: URI — Teams on college Windows machines picks this up as a call intent
+  var tel = 'tel:' + number.replace(/\s/g, '');
+  var escapedLabel  = label.replace(/'/g, '&#39;');
+  return '<a class="contact-num" href="' + tel + '" onclick="logCall(\'' + escapedLabel + '\',\'' + number + '\')">' +
+    '<div class="contact-num-icon ' + colorClass + '"><i class="ti ' + icon + '"></i></div>' +
+    '<div style="flex:1;min-width:0">' +
+      '<div class="contact-num-label">' + label + '</div>' +
+      '<div class="contact-num-sub">' + number + '</div>' +
+    '</div>' +
+    '<i class="ti ti-phone-call contact-num-arrow"></i>' +
+  '</a>';
+}
+
+function logCall(label, number) {
+  autoLog('Phone call', 'Called ' + label + ' (' + number + ')');
+  setTimeout(closeContactPopover, 150);
+}
+
+// Close popover on outside click
+document.addEventListener('click', function(e) {
+  if (popoverOpen && !document.getElementById('contact-popover').contains(e.target)) {
+    closeContactPopover();
+  }
+});
+function openAttendance() { autoLog('Attendance', 'Opened attendance record'); }
+
+// ─── Pathway ─────────────────────────────────────────────────────────────────
+var stages = [
+  { id:'informal', short:'INF', name:'Informal contact',      desc:'PM comments, calls, emails',                         dot:{bg:'#E1F5EE',border:'#0F6E56',text:'#085041'}, active:{bg:'#E1F5EE',border:'#0F6E56'}, badge:{bg:'#9FE1CB',text:'#085041'} },
+  { id:'stage0',   short:'S0',  name:'ALIP',                  desc:'A Level Improvement Plan meeting on PM',             dot:{bg:'#E6F1FB',border:'#185FA5',text:'#0C447C'}, active:{bg:'#E6F1FB',border:'#185FA5'}, badge:{bg:'#B5D4F4',text:'#0C447C'} },
+  { id:'stage1',   short:'S1',  name:'Verbal caution',        desc:'Formal meeting recorded on PM',                      dot:{bg:'#FAEEDA',border:'#BA7517',text:'#633806'}, active:{bg:'#FAEEDA',border:'#BA7517'}, badge:{bg:'#FAC775',text:'#633806'} },
+  { id:'stage2',   short:'S2',  name:'Formal warning',        desc:"Week's notice; DHoC attends; parent may attend",     dot:{bg:'#FAECE7',border:'#993C1D',text:'#712B13'}, active:{bg:'#FAECE7',border:'#D85A30'}, badge:{bg:'#F5C4B3',text:'#712B13'} },
+  { id:'stage3',   short:'S3',  name:'Final warning',         desc:'HoC and parent attend',                              dot:{bg:'#FCEBEB',border:'#A32D2D',text:'#791F1F'}, active:{bg:'#FCEBEB',border:'#A32D2D'}, badge:{bg:'#F7C1C1',text:'#791F1F'} },
+  { id:'stage4',   short:'S4',  name:'Final stage hearing',   desc:'Principal / SLT panel',                              dot:{bg:'#F09595',border:'#791F1F',text:'#501313'}, active:{bg:'#FCEBEB',border:'#791F1F'}, badge:{bg:'#E24B4A',text:'#FCEBEB'} }
+];
+
+var iconMap = {
+  'Phone call': ['ti-phone',          'i-blue'],
+  'Email':      ['ti-mail',           'i-purple'],
+  'Meeting':    ['ti-users',          'i-coral'],
+  'Note':       ['ti-notes',          'i-teal'],
+  'ProMonitor': ['ti-clipboard-list', 'i-teal'],
+  'Attendance': ['ti-calendar-stats', 'i-amber']
+};
+
+function buildPathway() {
+  document.getElementById('pathway').innerHTML = stages.map(function(s, i) {
+    var isLast = i === stages.length - 1;
+    return '<div class="stage-row" id="sr-'+s.id+'">'+
+      '<div class="stage-spine">'+
+        '<div class="stage-dot" style="background:'+s.dot.bg+';border-color:'+s.dot.border+';color:'+s.dot.text+'">'+s.short+'</div>'+
+        (!isLast ? '<div class="stage-line"></div>' : '')+
+      '</div>'+
+      '<div class="stage-body">'+
+        '<div class="stage-name">'+s.name+
+          '<span class="current-badge" id="ab-'+s.id+'" style="display:none;background:'+s.badge.bg+';color:'+s.badge.text+'">current</span>'+
+        '</div>'+
+        '<div class="stage-tag">'+s.desc+'</div>'+
+        '<a class="pm-link" id="pml-'+s.id+'" href="#"><i class="ti ti-external-link" style="font-size:10px"></i>ProMonitor</a>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+function setStage(stageId) {
+  stages.forEach(function(s) {
+    var row   = document.getElementById('sr-'+s.id);
+    var badge = document.getElementById('ab-'+s.id);
+    var active = s.id === stageId;
+    row.style.borderColor = active ? s.active.border : 'transparent';
+    row.style.background   = active ? s.active.bg    : '';
+    badge.style.display    = active ? 'inline'        : 'none';
+  });
+  // Wire each pathway ProMonitor link:
+  // Informal → actions.aspx (pastoral actions/comments)
+  // All formal stages → meetings.aspx (ALIP, cautions, warnings)
+  stages.forEach(function(s) {
+    var a = document.getElementById('pml-'+s.id);
+    if (!a || !currentStudent) return;
+    var url = s.id === 'informal'
+      ? currentStudent.pmActionsUrl
+      : currentStudent.pmMeetingsUrl;
+    if (url && url !== '#') { a.href = url; a.target = '_blank'; }
+  });
+}
+
+function clearStageHighlight() {
+  stages.forEach(function(s) {
+    document.getElementById('sr-'+s.id).style.borderColor = 'transparent';
+    document.getElementById('sr-'+s.id).style.background  = '';
+    document.getElementById('ab-'+s.id).style.display     = 'none';
+  });
+}
+
+// ─── Student display ──────────────────────────────────────────────────────────
+function doSearch() {
+  var q = document.getElementById('search-input').value.trim();
+  if (!q) return;
+  var s;
+  if (dataLoaded) {
+    s = studentMap[q];
+    if (!s) {
+      var ql = q.toLowerCase();
+      s = studentList.find(function(st) { return st.name.toLowerCase().includes(ql); });
+    }
+    if (!s) { showToast('No student found for "' + q + '"', false); return; }
+  } else {
+    s = mockStudents[q] || mockStudents['default'];
+  }
+  currentStudent = s;
+  renderStudentCard(s);
+}
+
+function renderStudentCard(s) {
+  document.getElementById('avatar').textContent = s.initials;
+  document.getElementById('s-name').textContent = s.name;
+  // Course subtitle: join multiple subjects with · separator
+  var courseStr = s.courses && s.courses.length ? s.courses.join(' · ') : (s.course || '');
+  document.getElementById('s-meta').textContent = s.id + ' · ' + courseStr;
+
+  var a = document.getElementById('s-att');
+  a.textContent = s.att;
+  a.className   = 'stat-v' + (s.attWarn ? ' warn' : '');
+
+  document.getElementById('s-target').textContent = s.target;
+
+  var c = document.getElementById('s-concerns');
+  c.textContent = s.concerns;
+  c.className   = 'stat-v' + (s.concernLevel ? ' ' + s.concernLevel : '');
+
+  document.getElementById('s-flags').innerHTML = (s.flags || []).map(function(f, i) {
+    return '<span class="flag ' + (s.flagTypes[i] || 'ft') + '">' + f + '</span>';
+  }).join('');
+
+  // Subject risk breakdown
+  var subjEl = document.getElementById('sc-subjects');
+  var subjects = s.subjectRisks || [];
+  if (subjects.length > 0) {
+    subjEl.style.display = '';
+    subjEl.innerHTML = subjects.map(function(sr) {
+      var riskClass, riskLabel;
+      switch (sr.risk) {
+        case 'High Risk':              riskClass = 'sr-high'; riskLabel = 'High Risk';  break;
+        case 'Medium Risk':            riskClass = 'sr-med';  riskLabel = 'Medium Risk'; break;
+        case 'Outstanding Performance':riskClass = 'sr-out';  riskLabel = 'Outstanding'; break;
+        default:                       riskClass = 'sr-none'; riskLabel = 'No Risk';
+      }
+      return '<div class="subj-row">'+
+        '<span class="subj-name">'+sr.title+'</span>'+
+        '<span class="subj-risk '+riskClass+'">'+riskLabel+'</span>'+
+      '</div>';
+    }).join('');
+  } else {
+    subjEl.style.display = 'none';
+  }
+
+  document.getElementById('student-card').classList.add('vis');
+  document.getElementById('actions-section').style.display = 'block';
+  document.getElementById('log-section').classList.add('vis');
+  document.getElementById('no-student').style.display = 'none';
+
+  if (s.stage) { setStage(s.stage); } else { clearStageHighlight(); }
+  renderLogs();
+}
+
+function clearStudent() {
+  currentStudent = null;
+  closeContactPopover();
+  document.getElementById('student-card').classList.remove('vis');
+  document.getElementById('actions-section').style.display = 'none';
+  document.getElementById('log-section').classList.remove('vis');
+  document.getElementById('no-student').style.display = 'block';
+  document.getElementById('search-input').value = '';
+  clearStageHighlight();
+}
+
+// ─── Logging ──────────────────────────────────────────────────────────────────
+function makeEntry(type, note) {
+  var now  = new Date();
+  var time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  return { id: nextId++, type: type, note: note || '', time: 'Today ' + time,
+           student: document.getElementById('s-name').textContent, committed: false };
+}
+
+function autoLog(type, note) { logs.unshift(makeEntry(type, note)); renderLogs(); showToast('Logged: ' + type, false); }
+
+function manualLog() {
+  var note = document.getElementById('log-note').value.trim();
+  logs.unshift(makeEntry(currentType, note));
+  document.getElementById('log-note').value = '';
+  renderLogs(); showToast('Action logged', false);
+}
+
+function setType(btn, type) {
+  currentType = type;
+  document.querySelectorAll('.type-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function startEdit(id)  { editingId = id; renderLogs(); var ta = document.getElementById('edit-ta-'+id); if (ta) { ta.focus(); ta.selectionStart = ta.value.length; } }
+function saveEdit(id)   { var ta = document.getElementById('edit-ta-'+id); var e = logs.find(function(l){return l.id===id;}); if (e && ta) e.note = ta.value.trim(); editingId = null; renderLogs(); }
+function cancelEdit()   { editingId = null; renderLogs(); }
+
+function deleteEntry(id) {
+  var idx = logs.findIndex(function(l) { return l.id === id; });
+  if (idx === -1) return;
+  lastDeleted = logs[idx]; lastDeletedIndex = idx;
+  logs.splice(idx, 1);
+  renderLogs(); showToast('Entry deleted', true);
+  clearTimeout(undoTimer);
+  undoTimer = setTimeout(function() { lastDeleted = null; }, 6000);
+}
+
+function undoDelete() {
+  if (!lastDeleted) return;
+  clearTimeout(undoTimer);
+  logs.splice(lastDeletedIndex, 0, lastDeleted);
+  lastDeleted = null; renderLogs(); hideToast();
+}
+
+function saveToSharedLog() {
+  var uncommitted = logs.filter(function(l) { return !l.committed; });
+  if (!uncommitted.length) { showToast('Nothing new to save', false); return; }
+
+  if (!GAS_ENDPOINT) {
+    // No endpoint configured — mark locally and note it
+    uncommitted.forEach(function(l) { l.committed = true; });
+    renderLogs();
+    showToast(uncommitted.length + ' ' + (uncommitted.length === 1 ? 'entry' : 'entries') + ' saved locally — no endpoint set', false);
+    return;
+  }
+
+  var entries = uncommitted.map(function(l) {
+    return {
+      staff:     STAFF_NAME,
+      studentId: currentStudent ? currentStudent.id : '',
+      student:   l.student,
+      type:      l.type,
+      note:      l.note,
+      date:      new Date().toLocaleDateString('en-GB'),
+      time:      l.time
+    };
+  });
+
+  // POST with no-cors + text/plain avoids CORS preflight.
+  // We write optimistically — the entry is marked committed on send.
+  fetch(GAS_ENDPOINT, {
+    method:  'POST',
+    mode:    'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body:    JSON.stringify({ action: 'log', entries: entries })
+  })
+  .then(function() {
+    uncommitted.forEach(function(l) { l.committed = true; });
+    renderLogs();
+    showToast(uncommitted.length + ' ' + (uncommitted.length === 1 ? 'entry' : 'entries') + ' saved to shared log', false);
+  })
+  .catch(function(err) {
+    showToast('Could not reach shared log — ' + err.message, false);
+  });
+}
+
+function renderLogs() {
+  var el = document.getElementById('log-entries');
+  if (!logs.length) {
+    el.innerHTML = '<div class="log-empty">No actions logged yet &mdash; use the buttons above or add a manual entry.</div>';
+    return;
+  }
+  el.innerHTML = logs.map(function(l) {
+    var ic = iconMap[l.type] || ['ti-circle-check', 'i-teal'];
+    var isEditing = (editingId === l.id);
+    return '<div class="log-entry' + (l.committed ? ' committed' : '') + '" id="le-'+l.id+'">'+
+      '<div class="entry-icon '+ic[1]+'"><i class="ti '+ic[0]+'"></i></div>'+
+      '<div class="entry-body">'+
+        '<div class="entry-title">'+l.type+' &mdash; '+l.student+
+          (l.committed ? ' <span class="committed-badge">&#10003; saved</span>' : '')+
+        '</div>'+
+        (isEditing
+          ? '<textarea class="entry-note-edit" id="edit-ta-'+l.id+'" onkeydown="if(event.key===\'Escape\')cancelEdit()">'+l.note+'</textarea>'
+          : (l.note ? '<div class="entry-note">'+l.note+'</div>' : ''))+
+        '<div class="entry-time">'+l.time+'</div>'+
+      '</div>'+
+      '<div class="entry-actions">'+
+        (isEditing
+          ? '<button class="icon-btn confirm" onclick="saveEdit('+l.id+')" title="Save edit"><i class="ti ti-check"></i></button>'+
+            '<button class="icon-btn" onclick="cancelEdit()" title="Cancel"><i class="ti ti-x"></i></button>'
+          : (!l.committed
+            ? '<button class="icon-btn" onclick="startEdit('+l.id+')" title="Edit note"><i class="ti ti-edit"></i></button>'+
+              '<button class="icon-btn danger" onclick="deleteEntry('+l.id+')" title="Delete entry"><i class="ti ti-trash"></i></button>'
+            : ''))+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function showToast(msg, withUndo) {
+  clearTimeout(toastTimer);
+  var t = document.getElementById('toast');
+  document.getElementById('toast-msg').textContent   = (withUndo ? '' : '✓ ') + msg;
+  document.getElementById('undo-link').style.display = withUndo ? 'inline' : 'none';
+  t.className = 'toast show' + (withUndo ? '' : ' success');
+  toastTimer  = setTimeout(hideToast, withUndo ? 5500 : 2500);
+}
+function hideToast() { document.getElementById('toast').classList.remove('show'); }
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+buildPathway();
+renderLogs();
+if (GAS_ENDPOINT) {
+  loadStudentData();
+} else {
+  var el = document.getElementById('data-status');
+  el.className = 'data-status';
+  document.getElementById('data-status-text').textContent = 'Demo mode — no endpoint set';
+}
+</script>
+</body>
+</html>

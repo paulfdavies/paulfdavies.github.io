@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Brown's 14 Grammatical Morphemes Activity</title>
+  <style>
+    :root {
+      --bg-color: #f0f4f8;
+      --header-bg: #ffffff;
+      --def-bg: #fff3e0;
+      --def-border: #ffb74d;
+      --def-text: #e65100;
+      --ex-bg: #e1f5fe;
+      --ex-border: #4fc3f7;
+      --ex-text: #0277bd;
+      --highlight-color: #4caf50;
+      
+      --correct-color: #2e7d32;
+      --incorrect-color: #c62828;
+      --warning-color: #e67e22;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    /* Fixed Top Control Bar */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 70px;
+      background-color: var(--header-bg);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 5000;
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #334155;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+    }
+
+    header button {
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      background: #f8fafc;
+      color: #475569;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    header button:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    /* Toggle Active States for Checking Modes */
+    header button.active-btn {
+      background-color: #6366f1;
+      color: #ffffff;
+      border-color: #4f46e5;
+    }
+
+    header button#reset-btn:hover {
+      background-color: #fff1f2;
+      border-color: #fda4af;
+      color: #be123c;
+    }
+
+    /* Main Workspace Board */
+    #board {
+      width: 100vw;
+      height: calc(100vh - 70px);
+      margin-top: 70px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Card Layout Structures */
+    .card {
+      position: absolute;
+      width: 250px;
+      height: 85px;
+      padding: 12px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+      line-height: 1.3;
+      cursor: grab;
+      touch-action: none;
+      z-index: 10;
+      transition: transform 0.15s ease-out, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .card.definition {
+      background-color: var(--def-bg);
+      border: 3px solid var(--def-border);
+      color: var(--def-text);
+    }
+
+    .card.example {
+      background-color: var(--ex-bg);
+      border: 3px solid var(--ex-border);
+      color: var(--ex-text);
+    }
+
+    .card.dragging {
+      cursor: grabbing;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+      transition: none !important;
+      z-index: 4000 !important;
+    }
+
+    .card.highlight {
+      border-color: var(--highlight-color) !important;
+      box-shadow: 0 0 15px var(--highlight-color);
+    }
+
+    /* Checking Feedback Classes */
+    .card.correct-pair {
+      border-color: var(--correct-color) !important;
+      box-shadow: 0 0 12px rgba(46, 125, 50, 0.4);
+    }
+
+    .card.incorrect-pair {
+      border-color: var(--incorrect-color) !important;
+      box-shadow: 0 0 12px rgba(198, 40, 40, 0.4);
+    }
+
+    /* Feedback Badges (Projector Optimized) */
+    .badge {
+      position: absolute;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      z-index: 4500;
+    }
+
+    /* Connection Status Badge */
+    .connection-badge {
+      top: -12px;
+      right: -12px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 16px;
+    }
+
+    .card.correct-pair .connection-badge {
+      display: flex;
+      background-color: var(--correct-color);
+    }
+    .card.incorrect-pair .connection-badge {
+      display: flex;
+      background-color: var(--incorrect-color);
+    }
+
+    /* Chronological Order Sequence Badge */
+    .order-badge {
+      top: -14px;
+      left: -14px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 15px;
+      letter-spacing: -0.5px;
+      min-width: 34px;
+    }
+
+    .show-order .order-badge {
+      display: flex;
+    }
+    
+    .order-badge.order-correct {
+      background-color: var(--correct-color);
+    }
+    .order-badge.order-incorrect {
+      background-color: var(--warning-color);
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="title">Brown's Morphemes Activity</div>
+    <div class="controls">
+      <button id="check-connections-btn">Check Connections</button>
+      <button id="check-order-btn">Check Order</button>
+      <button id="reset-btn">Reset Workspace</button>
+      <button id="fullscreen-btn">Fullscreen</button>
+    </div>
+  </header>
+
+  <div id="board"></div>
+
+  <script>
+    const CARD_WIDTH = 250;
+    const CARD_HEIGHT = 85;
+    const SNAP_GAP = 12; 
+    const SNAP_RADIUS = 100; 
+
+    const rawData = [
+      { def: "Progressive -ing", ex: "I'm going" },
+      { def: "Prepositions in / on", ex: "in bed / on table" },
+      { def: "Plural -s", ex: "two cats" },
+      { def: "Irregular past tense", ex: "broke, fell" },
+      { def: "Possessive -s", ex: "Toby’s book" },
+      { def: "Uncontractible copula be", ex: "This is hot" },
+      { def: "Articles a / the", ex: "the car" },
+      { def: "Regular past -ed", ex: "I cooked it" },
+      { def: "3rd person regular -s", ex: "he sees me" },
+      { def: "3rd person irregular", ex: "he has some" },
+      { def: "Uncontractible auxiliary be", ex: "she was running" },
+      { def: "Contractible copula be", ex: "I'm hot" },
+      { def: "Contractible auxiliary be", ex: "she’s running" }
+    ];
+
+    let cards = [];
+    let draggedCard = null;
+    let partnerCard = null;
+    let maxZIndex = 100;
+
+    let isCheckingConnections = false;
+    let isCheckingOrder = false;
+
+    let dragState = {
+      startX: 0,
+      startY: 0,
+      cardStartX: 0,
+      cardStartY: 0
+    };
+
+    const board = document.getElementById('board');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const checkConnectionsBtn = document.getElementById('check-connections-btn');
+    const checkOrderBtn = document.getElementById('check-order-btn');
+
+    // Fisher-Yates Spatial Shuffling Utility
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function init() {
+      board.innerHTML = '';
+      cards = [];
+      clearCheckingStates();
+
+      rawData.forEach((item, index) => {
+        cards.push({
+          id: `def-${index}`,
+          type: 'definition',
+          text: item.def,
+          index: index, // Stable developmental sequence metadata marker
+          x: 0, y: 0,
+          pairId: null,
+          element: null
+        });
+
+        cards.push({
+          id: `ex-${index}`,
+          type: 'example',
+          text: item.ex,
+          index: index, // Stable developmental sequence metadata marker
+          x: 0, y: 0,
+          pairId: null,
+          element: null
+        });
+      });
+
+      // Randomize the initial array layout lists completely
+      shuffleArray(cards);
+
+      cards.forEach((card) => {
+        const el = document.createElement('div');
+        el.className = `card ${card.type}`;
+        el.dataset.id = card.id;
+
+        // Structural Content
+        const textSpan = document.createElement('span');
+        textSpan.textContent = card.text;
+        el.appendChild(textSpan);
+
+        // Connection Validation Badge
+        const connBadge = document.createElement('div');
+        connBadge.className = 'badge connection-badge';
+        el.appendChild(connBadge);
+
+        // Chronological Sequence Badge
+        const orderBadge = document.createElement('div');
+        orderBadge.className = 'badge order-badge';
+        el.appendChild(orderBadge);
+
+        board.appendChild(el);
+        card.element = el;
+      });
+
+      layoutCards();
+    }
+
+    function layoutCards() {
+      const w = window.innerWidth;
+      const h = window.innerHeight - 70; 
+      
+      const defCards = cards.filter(c => c.type === 'definition');
+      const exCards = cards.filter(c => c.type === 'example');
+
+      const distributeSide = (sideCards, isLeft) => {
+        sideCards.forEach((card, i) => {
+          if (card.pairId) return; 
+
+          let col = i % 2;
+          let row = Math.floor(i / 2);
+
+          let startX = isLeft ? 50 : (w / 2) + 50;
+          let endX = isLeft ? (w / 2) - CARD_WIDTH - 50 : w - CARD_WIDTH - 50;
+          
+          let xGap = (endX - startX) / 1;
+          let x = startX + (col * xGap);
+
+          let yGap = (h - CARD_HEIGHT - 60) / 6;
+          let y = 30 + (row * yGap);
+
+          card.x = x;
+          card.y = y;
+          updateTransform(card);
+        });
+      };
+
+      distributeSide(defCards, true);
+      distributeSide(exCards, false);
+    }
+
+    function updateTransform(card) {
+      if (card.element) {
+        card.element.style.transform = `translate(${card.x}px, ${card.y}px)`;
+      }
+    }
+
+    function clearCheckingStates() {
+      isCheckingConnections = false;
+      isCheckingOrder = false;
+      checkConnectionsBtn.classList.remove('active-btn');
+      checkOrderBtn.classList.remove('active-btn');
+
+      cards.forEach(card => {
+        if (!card.element) return;
+        card.element.classList.remove('correct-pair', 'incorrect-pair', 'show-order');
+        const connBadge = card.element.querySelector('.connection-badge');
+        if (connBadge) connBadge.textContent = '';
+      });
+    }
+
+    // Global Pointer Drag Operations
+    board.addEventListener('pointerdown', (e) => {
+      const targetEl = e.target.closest('.card');
+      if (!targetEl) return;
+
+      if (isCheckingConnections || isCheckingOrder) {
+        clearCheckingStates();
+      }
+
+      const cardId = targetEl.dataset.id;
+      draggedCard = cards.find(c => c.id === cardId);
+      if (!draggedCard) return;
+
+      // RIGHT SIDE (EXAMPLES) DETACHMENT
+      if (draggedCard.type === 'example' && draggedCard.pairId) {
+        const structuralPartner = cards.find(c => c.id === draggedCard.pairId);
+        if (structuralPartner) structuralPartner.pairId = null;
+        draggedCard.pairId = null;
+        partnerCard = null; 
+      }
+
+      draggedCard.element.classList.add('dragging');
+      maxZIndex += 2;
+      draggedCard.element.style.zIndex = maxZIndex;
+
+      dragState.startX = e.clientX;
+      dragState.startY = e.clientY;
+      dragState.cardStartX = draggedCard.x;
+      dragState.cardStartY = draggedCard.y;
+
+      // LEFT SIDE (DEFINITIONS) CONTROL MOVEMENT
+      if (draggedCard.type === 'definition' && draggedCard.pairId) {
+        partnerCard = cards.find(c => c.id === draggedCard.pairId);
+        if (partnerCard) {
+          partnerCard.element.style.zIndex = maxZIndex - 1;
+          partnerCard.element.classList.add('dragging');
+        }
+      } else if (draggedCard.type === 'definition') {
+        partnerCard = null;
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!draggedCard) return;
+
+      let deltaX = e.clientX - dragState.startX;
+      let deltaY = e.clientY - dragState.startY;
+
+      let newX = dragState.cardStartX + deltaX;
+      let newY = dragState.cardStartY + deltaY;
+
+      if (partnerCard) {
+        const combinedPairWidth = (CARD_WIDTH * 2) + SNAP_GAP;
+        newX = Math.max(10, Math.min(window.innerWidth - combinedPairWidth - 10, newX));
+        newY = Math.max(10, Math.min(board.clientHeight - CARD_HEIGHT - 10, newY));
+
+        draggedCard.x = newX;
+        draggedCard.y = newY;
+
+        partnerCard.x = newX + CARD_WIDTH + SNAP_GAP;
+        partnerCard.y = newY;
+
+        updateTransform(draggedCard);
+        updateTransform(partnerCard);
+      } else {
+        newX = Math.max(10, Math.min(window.innerWidth - CARD_WIDTH - 10, newX));
+        newY = Math.max(10, Math.min(board.clientHeight - CARD_HEIGHT - 10, newY));
+
+        draggedCard.x = newX;
+        draggedCard.y = newY;
+        updateTransform(draggedCard);
+      }
+
+      evaluateSnapTargets(draggedCard);
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (!draggedCard) return;
+
+      draggedCard.element.classList.remove('dragging');
+      if (partnerCard) {
+        partnerCard.element.classList.remove('dragging');
+      }
+
+      if (!draggedCard.pairId) {
+        let bestTarget = findClosestTarget(draggedCard);
+        if (bestTarget) {
+          executeSnap(draggedCard, bestTarget);
+        }
+      }
+
+      clearAllHighlights();
+      draggedCard = null;
+      partnerCard = null;
+    });
+
+    function findClosestTarget(card) {
+      let closestCard = null;
+      let minDistance = SNAP_RADIUS;
+
+      cards.forEach(candidate => {
+        if (candidate.type === card.type || candidate.pairId) return;
+
+        let idealX, idealY;
+        if (card.type === 'definition') {
+          idealX = candidate.x - (CARD_WIDTH + SNAP_GAP);
+          idealY = candidate.y;
+        } else {
+          idealX = candidate.x + (CARD_WIDTH + SNAP_GAP);
+          idealY = candidate.y;
+        }
+
+        let currentDist = Math.hypot(card.x - idealX, card.y - idealY);
+        if (currentDist < minDistance) {
+          minDistance = currentDist;
+          closestCard = candidate;
+        }
+      });
+
+      return closestCard;
+    }
+
+    function evaluateSnapTargets(card) {
+      clearAllHighlights();
+      if (card.pairId) return;
+      
+      let target = findClosestTarget(card);
+      if (target) {
+        target.element.classList.add('highlight');
+      }
+    }
+
+    function clearAllHighlights() {
+      cards.forEach(c => c.element && c.element.classList.remove('highlight'));
+    }
+
+    function executeSnap(cardA, cardB) {
+      let def = cardA.type === 'definition' ? cardA : cardB;
+      let ex = cardA.type === 'example' ? cardA : cardB;
+
+      def.pairId = ex.id;
+      ex.pairId = def.id;
+
+      if (cardA.type === 'definition') {
+        def.y = ex.y;
+        def.x = ex.x - (CARD_WIDTH + SNAP_GAP);
+      } else {
+        ex.y = def.y;
+        ex.x = def.x + (CARD_WIDTH + SNAP_GAP);
+      }
+
+      updateTransform(def);
+      updateTransform(ex);
+    }
+
+    // --- Verification Logic Engines ---
+
+    // 1. Connection Validation Handler (With Flexible Interchanging Rules)
+    checkConnectionsBtn.addEventListener('click', () => {
+      if (isCheckingConnections) {
+        clearCheckingStates();
+        return;
+      }
+      clearCheckingStates();
+      isCheckingConnections = true;
+      checkConnectionsBtn.classList.add('active-btn');
+
+      cards.forEach(card => {
+        if (!card.pairId) return; 
+
+        const partner = cards.find(c => c.id === card.pairId);
+        const connBadge = card.element.querySelector('.connection-badge');
+
+        // Check structural interchangeable alignment rule for -ing & contractible auxiliary be cross pairings
+        const isFlexibleMatch = (card.index === 0 && partner.index === 12) || (card.index === 12 && partner.index === 0);
+
+        if (card.index === partner.index || isFlexibleMatch) {
+          card.element.classList.add('correct-pair');
+          if (connBadge) connBadge.innerHTML = '✓';
+        } else {
+          card.element.classList.add('incorrect-pair');
+          if (connBadge) connBadge.innerHTML = '✕';
+        }
+      });
+    });
+
+    // 2. Dynamic Proximity-Based Sequence Sorting Engine
+    checkOrderBtn.addEventListener('click', () => {
+      if (isCheckingOrder) {
+        clearCheckingStates();
+        return;
+      }
+      clearCheckingStates();
+      isCheckingOrder = true;
+      checkOrderBtn.classList.add('active-btn');
+
+      const defCards = cards.filter(c => c.type === 'definition');
+      
+      // Step A: Sort definition list by horizontal x coordinate to scan from left-to-right
+      let sortedByX = [...defCards].sort((a, b) => a.x - b.x);
+
+      // Step B: Cluster definitions dynamically into individual column stacks using proximity splits
+      let columns = [];
+      if (sortedByX.length > 0) {
+        let currentColumn = [sortedByX[0]];
+        
+        for (let i = 1; i < sortedByX.length; i++) {
+          const card = sortedByX[i];
+          const prevCard = sortedByX[i - 1];
+          
+          // Separate into a new column if the horizontal gap exceeds 120 pixels
+          if (card.x - prevCard.x < 120) {
+            currentColumn.push(card);
+          } else {
+            currentColumn.sort((a, b) => a.y - b.y); // Sort finished column top-to-bottom
+            columns.push(currentColumn);
+            currentColumn = [card];
+          }
+        }
+        currentColumn.sort((a, b) => a.y - b.y);
+        columns.push(currentColumn);
+      }
+
+      // Step C: Flatten the column stacks into a clean linear spatial map sequence
+      let computedSequence = [];
+      columns.forEach(col => {
+        computedSequence = computedSequence.concat(col);
+      });
+
+      // Step D: Apply validation and display rules to badges
+      computedSequence.forEach((card, listPositionIndex) => {
+        card.element.classList.add('show-order');
+        const orderBadge = card.element.querySelector('.order-badge');
+        
+        const trueChronologicalDisplayNumber = card.index + 1; 
+
+        if (card.index === listPositionIndex) {
+          // Correct sequence location: reveal chronological timeline rank number
+          orderBadge.className = 'badge order-badge order-correct';
+          orderBadge.textContent = `#${trueChronologicalDisplayNumber}`;
+        } else {
+          // Mismatched location: hide answers entirely and display warning indicator
+          orderBadge.className = 'badge order-badge order-incorrect';
+          orderBadge.textContent = '✕';
+        }
+      });
+    });
+
+    resetBtn.addEventListener('click', () => {
+      init();
+    });
+
+    fullscreenBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          alert(`Error entering fullscreen mode: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      cards.forEach(card => {
+        card.x = Math.max(10, Math.min(window.innerWidth - CARD_WIDTH - 10, card.x));
+        card.y = Math.max(10, Math.min(board.clientHeight - CARD_HEIGHT - 10, card.y));
+        updateTransform(card);
+      });
+    });
+
+    init();
+  </script>
+</body>
+</html>
