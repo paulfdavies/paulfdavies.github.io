@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Halliday's Functions of Language Activity</title>
+  <style>
+    :root {
+      --bg-color: #f0f4f8;
+      --header-bg: #ffffff;
+      --def-bg: #fff3e0;
+      --def-border: #ffb74d;
+      --def-text: #e65100;
+      --ex-bg: #e1f5fe;
+      --ex-border: #4fc3f7;
+      --ex-text: #0277bd;
+      --highlight-color: #4caf50;
+      --correct-color: #2e7d32;
+      --incorrect-color: #c62828;
+      --warning-color: #e67e22;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: var(--bg-color);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 70px;
+      background-color: var(--header-bg);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 24px;
+      z-index: 5000;
+    }
+
+    .title {
+      font-size: 20px;
+      font-weight: 800;
+      color: #334155;
+      white-space: nowrap;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: nowrap;
+    }
+
+    header button {
+      padding: 10px 20px;
+      font-size: 15px;
+      font-weight: 700;
+      background: #f8fafc;
+      color: #475569;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    header button:hover {
+      background: #f1f5f9;
+      border-color: #94a3b8;
+    }
+
+    header button.active-btn {
+      background-color: #6366f1;
+      color: #ffffff;
+      border-color: #4f46e5;
+    }
+
+    header button#reset-btn:hover {
+      background-color: #fff1f2;
+      border-color: #fda4af;
+      color: #be123c;
+    }
+
+    #board {
+      width: 100vw;
+      height: calc(100vh - 70px);
+      margin-top: 70px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card {
+      position: absolute;
+      width: 285px;
+      height: 95px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.25;
+      cursor: grab;
+      touch-action: none;
+      z-index: 10;
+      transition: transform 0.15s ease-out, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .card.definition {
+      background-color: var(--def-bg);
+      border: 3px solid var(--def-border);
+      color: var(--def-text);
+    }
+
+    .card.example {
+      background-color: var(--ex-bg);
+      border: 3px solid var(--ex-border);
+      color: var(--ex-text);
+    }
+
+    .card.dragging {
+      cursor: grabbing;
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+      transition: none !important;
+      z-index: 4000 !important;
+    }
+
+    .card.highlight {
+      border-color: var(--highlight-color) !important;
+      box-shadow: 0 0 15px var(--highlight-color);
+    }
+
+    .card.correct-pair {
+      border-color: var(--correct-color) !important;
+      box-shadow: 0 0 12px rgba(46, 125, 50, 0.4);
+    }
+
+    .card.incorrect-pair {
+      border-color: var(--incorrect-color) !important;
+      box-shadow: 0 0 12px rgba(198, 40, 40, 0.4);
+    }
+
+    .badge {
+      position: absolute;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+      color: #ffffff;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      z-index: 4500;
+    }
+
+    .connection-badge {
+      top: -12px;
+      right: -12px;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      font-size: 16px;
+    }
+
+    .card.correct-pair .connection-badge {
+      display: flex;
+      background-color: var(--correct-color);
+    }
+
+    .card.incorrect-pair .connection-badge {
+      display: flex;
+      background-color: var(--incorrect-color);
+    }
+
+    .order-badge {
+      top: -14px;
+      left: -14px;
+      padding: 4px 10px;
+      border-radius: 8px;
+      font-size: 15px;
+      letter-spacing: -0.5px;
+      min-width: 34px;
+    }
+
+    .show-order .order-badge {
+      display: flex;
+    }
+
+    .order-badge.order-correct {
+      background-color: var(--correct-color);
+    }
+
+    .order-badge.order-incorrect {
+      background-color: var(--warning-color);
+    }
+
+    .legend {
+      position: absolute;
+      bottom: 14px;
+      left: 18px;
+      font-size: 14px;
+      color: #64748b;
+      background: rgba(255,255,255,0.82);
+      border: 1px solid #cbd5e1;
+      border-radius: 10px;
+      padding: 8px 12px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 1050px) {
+      .card {
+        width: 245px;
+        height: 88px;
+        font-size: 16px;
+      }
+      header button {
+        padding: 8px 12px;
+      }
+      .title {
+        font-size: 17px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">Halliday's Functions of Language</div>
+    <div class="controls">
+      <button id="check-connections-btn">Check Connections</button>
+      <button id="check-order-btn">Check Order</button>
+      <button id="reset-btn">Reset Workspace</button>
+      <button id="fullscreen-btn">Fullscreen</button>
+    </div>
+  </header>
+
+  <div id="board">
+    <div class="legend">Orange = function/category · Blue = example · Pair cards, then check matching and sequence separately.</div>
+  </div>
+
+  <script>
+    const CARD_WIDTH = 285;
+    const CARD_HEIGHT = 95;
+    const SNAP_GAP = 12;
+    const SNAP_RADIUS = 105;
+
+    // Sheet order is the correct sequence.
+    const rawData = [
+      { def: "Instrumental", ex: "Want juice!" },
+      { def: "Regulatory", ex: "Go away!" },
+      { def: "Interactional", ex: "Love you mummy" },
+      { def: "Personal", ex: "Me good girl" },
+      { def: "Heuristic", ex: "What tractor doing?" },
+      { def: "Imaginative", ex: "I'm a cowboy — you're an Indian" },
+      { def: "Representational", ex: "I'll tell you how to do it" }
+    ];
+
+    let cards = [];
+    let draggedCard = null;
+    let partnerCard = null;
+    let maxZIndex = 100;
+    let isCheckingConnections = false;
+    let isCheckingOrder = false;
+
+    let dragState = {
+      startX: 0,
+      startY: 0,
+      cardStartX: 0,
+      cardStartY: 0
+    };
+
+    const board = document.getElementById('board');
+    const fullscreenBtn = document.getElementById('fullscreen-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const checkConnectionsBtn = document.getElementById('check-connections-btn');
+    const checkOrderBtn = document.getElementById('check-order-btn');
+
+    function shuffleArray(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+    }
+
+    function init() {
+      board.querySelectorAll('.card').forEach(el => el.remove());
+      cards = [];
+      clearCheckingStates();
+
+      rawData.forEach((item, index) => {
+        cards.push({
+          id: `def-${index}`,
+          type: 'definition',
+          text: item.def,
+          index: index,
+          x: 0,
+          y: 0,
+          pairId: null,
+          element: null
+        });
+
+        cards.push({
+          id: `ex-${index}`,
+          type: 'example',
+          text: item.ex,
+          index: index,
+          x: 0,
+          y: 0,
+          pairId: null,
+          element: null
+        });
+      });
+
+      shuffleArray(cards);
+
+      cards.forEach((card) => {
+        const el = document.createElement('div');
+        el.className = `card ${card.type}`;
+        el.dataset.id = card.id;
+
+        const textSpan = document.createElement('span');
+        textSpan.textContent = card.text;
+        el.appendChild(textSpan);
+
+        const connBadge = document.createElement('div');
+        connBadge.className = 'badge connection-badge';
+        el.appendChild(connBadge);
+
+        const orderBadge = document.createElement('div');
+        orderBadge.className = 'badge order-badge';
+        el.appendChild(orderBadge);
+
+        board.appendChild(el);
+        card.element = el;
+      });
+
+      layoutCards();
+    }
+
+    function layoutCards() {
+      const w = window.innerWidth;
+      const h = window.innerHeight - 70;
+      const defCards = cards.filter(c => c.type === 'definition');
+      const exCards = cards.filter(c => c.type === 'example');
+
+      const distributeSide = (sideCards, isLeft) => {
+        sideCards.forEach((card, i) => {
+          if (card.pairId) return;
+
+          const col = i % 2;
+          const row = Math.floor(i / 2);
+          const startX = isLeft ? 50 : (w / 2) + 50;
+          const endX = isLeft ? (w / 2) - CARD_WIDTH - 50 : w - CARD_WIDTH - 50;
+          const xGap = Math.max(0, endX - startX);
+          const x = startX + (col * xGap);
+          const usableRows = Math.max(1, Math.ceil(sideCards.length / 2) - 1);
+          const yGap = Math.min(115, Math.max(86, (h - CARD_HEIGHT - 80) / usableRows));
+          const y = 30 + (row * yGap);
+
+          card.x = x;
+          card.y = y;
+          updateTransform(card);
+        });
+      };
+
+      distributeSide(defCards, true);
+      distributeSide(exCards, false);
+    }
+
+    function updateTransform(card) {
+      if (card.element) {
+        card.element.style.transform = `translate(${card.x}px, ${card.y}px)`;
+      }
+    }
+
+    function clearCheckingStates() {
+      isCheckingConnections = false;
+      isCheckingOrder = false;
+      checkConnectionsBtn.classList.remove('active-btn');
+      checkOrderBtn.classList.remove('active-btn');
+
+      cards.forEach(card => {
+        if (!card.element) return;
+        card.element.classList.remove('correct-pair', 'incorrect-pair', 'show-order');
+
+        const connBadge = card.element.querySelector('.connection-badge');
+        const orderBadge = card.element.querySelector('.order-badge');
+
+        if (connBadge) connBadge.textContent = '';
+        if (orderBadge) {
+          orderBadge.textContent = '';
+          orderBadge.className = 'badge order-badge';
+        }
+      });
+    }
+
+    board.addEventListener('pointerdown', (e) => {
+      const targetEl = e.target.closest('.card');
+      if (!targetEl) return;
+
+      if (isCheckingConnections || isCheckingOrder) {
+        clearCheckingStates();
+      }
+
+      const cardId = targetEl.dataset.id;
+      draggedCard = cards.find(c => c.id === cardId);
+      if (!draggedCard) return;
+
+      // Dragging the right side of a pair detaches it.
+      if (draggedCard.type === 'example' && draggedCard.pairId) {
+        const structuralPartner = cards.find(c => c.id === draggedCard.pairId);
+        if (structuralPartner) structuralPartner.pairId = null;
+        draggedCard.pairId = null;
+        partnerCard = null;
+      }
+
+      draggedCard.element.classList.add('dragging');
+      maxZIndex += 2;
+      draggedCard.element.style.zIndex = maxZIndex;
+
+      dragState.startX = e.clientX;
+      dragState.startY = e.clientY;
+      dragState.cardStartX = draggedCard.x;
+      dragState.cardStartY = draggedCard.y;
+
+      // Dragging the left side of a pair moves both cards together.
+      if (draggedCard.type === 'definition' && draggedCard.pairId) {
+        partnerCard = cards.find(c => c.id === draggedCard.pairId);
+        if (partnerCard) {
+          partnerCard.element.style.zIndex = maxZIndex - 1;
+          partnerCard.element.classList.add('dragging');
+        }
+      } else if (draggedCard.type === 'definition') {
+        partnerCard = null;
+      }
+    });
+
+    window.addEventListener('pointermove', (e) => {
+      if (!draggedCard) return;
+
+      let deltaX = e.clientX - dragState.startX;
+      let deltaY = e.clientY - dragState.startY;
+      let newX = dragState.cardStartX + deltaX;
+      let newY = dragState.cardStartY + deltaY;
+
+      if (partnerCard) {
+        const combinedPairWidth = (CARD_WIDTH * 2) + SNAP_GAP;
+        newX = Math.max(10, Math.min(window.innerWidth - combinedPairWidth - 10, newX));
+        newY = Math.max(10, Math.min(board.clientHeight - CARD_HEIGHT - 10, newY));
+
+        draggedCard.x = newX;
+        draggedCard.y = newY;
+        partnerCard.x = newX + CARD_WIDTH + SNAP_GAP;
+        partnerCard.y = newY;
+
+        updateTransform(draggedCard);
+        updateTransform(partnerCard);
+      } else {
+        newX = Math.max(10, Math.min(window.innerWidth - CARD_WIDTH - 10, newX));
+        newY = Math.max(10, Math.min(board.clientHeight - CARD_HEIGHT - 10, newY));
+
+        draggedCard.x = newX;
+        draggedCard.y = newY;
+        updateTransform(draggedCard);
+      }
+
+      evaluateSnapTargets(draggedCard);
+    });
+
+    window.addEventListener('pointerup', () => {
+      if (!draggedCard) return;
+
+      draggedCard.element.classList.remove('dragging');
+      if (partnerCard) partnerCard.element.classList.remove('dragging');
+
+      if (!draggedCard.pairId) {
+        const bestTarget = findClosestTarget(draggedCard);
+        if (bestTarget) executeSnap(draggedCard, bestTarget);
+      }
+
+      clearAllHighlights();
+      draggedCard = null;
+      partnerCard = null;
+    });
+
+    function findClosestTarget(card) {
+      let closestCard = null;
+      let minDistance = SNAP_RADIUS;
+
+      cards.forEach(candidate => {
+        if (candidate.type === card.type || candidate.pairId) return;
+
+        let idealX, idealY;
+
+        if (card.type === 'definition') {
+          idealX = candidate.x - (CARD_WIDTH + SNAP_GAP);
+          idealY = candidate.y;
+        } else {
+          idealX = candidate.x + (CARD_WIDTH + SNAP_GAP);
+          idealY = candidate.y;
+        }
+
+        const currentDist = Math.hypot(card.x - idealX, card.y - idealY);
+        if (currentDist < minDistance) {
+          minDistance = currentDist;
+          closestCard = candidate;
+        }
+      });
+
+      return closestCard;
+    }
+
+    function evaluateSnapTargets(card) {
+      clearAllHighlights();
+      if (card.pairId) return;
+
+      const target = findClosestTarget(card);
+      if (target) target.element.classList.add('highlight');
+    }
+
+    function clearAllHighlights() {
+      cards.forEach(c => c.element && c.element.classList.remove('highlight'));
+    }
+
+    function executeSnap(cardA, cardB) {
+      const def = cardA.type === 'definition' ? cardA : cardB;
+      const ex = cardA.type === 'example' ? cardA : cardB;
+
+      def.pairId = ex.id;
+      ex.pairId = def.id;
+
+      if (cardA.type === 'definition') {
+        def.y = ex.y;
+        def.x = ex.x - (CARD_WIDTH + SNAP_GAP);
+      } else {
+        ex.y = def.y;
+        ex.x = def.x + CARD_WIDTH + SNAP_GAP;
+      }
+
+      updateTransform(def);
+      updateTransform(ex);
+    }
+
+    checkConnectionsBtn.addEventListener('click', () => {
+      if (isCheckingConnections) {
+        clearCheckingStates();
+        return;
+      }
+
+      clearCheckingStates();
+      isCheckingConnections = true;
+      checkConnectionsBtn.classList.add('active-btn');
+
+      cards.forEach(card => {
+        if (!card.pairId) return;
+
+        const partner = cards.find(c => c.id === card.pairId);
+        const connBadge = card.element.querySelector('.connection-badge');
+
+        if (card.index === partner.index) {
+          card.element.classList.add('correct-pair');
+          if (connBadge) connBadge.textContent = '✓';
+        } else {
+          card.element.classList.add('incorrect-pair');
+          if (connBadge) connBadge.textContent = '✕';
+        }
+      });
+    });
+
+    checkOrderBtn.addEventListener('click', () => {
+      if (isCheckingOrder) {
+        clearCheckingStates();
+        return;
+      }
+
+      clearCheckingStates();
+      isCheckingOrder = true;
+      checkOrderBtn.classList.add('active-btn');
+
+      const defCards = cards.filter(c => c.type === 'definition');
+      const sortedByX = [...defCards].sort((a, b) => a.x - b.x);
+      const columns = [];
+
+      if (sortedByX.length > 0) {
+        let currentColumn = [sortedByX[0]];
+
+        for (let i = 1; i < sortedByX.length; i++) {
+          const card = sortedByX[i];
+          const prevCard = sortedByX[i - 1];
+
+          if (card.x - prevCard.x < 120) {
+            currentColumn.push(card);
+          } else {
+            currentColumn.sort((a, b) => a.y - b.y);
+            columns.push(currentColumn);
+            currentColumn = [card];
+          }
+        }
+
+        currentColumn.sort((a, b) => a.y - b.y);
+        columns.push(currentColumn);
+      }
+
+      let computedSequence = [];
+      columns.forEach(col => {
+        computedSequence = computedSequence.concat(col);
+      });
+
+      computedSequence.forEach((card, listPositionIndex) => {
+        card.element.classList.add('show-order');
+        const orderBadge = card.element.querySelector('.order-badge');
+        const trueDisplayNumber = card.index + 1;
+
+        if (card.index === listPositionIndex) {
+          orderBadge.className = 'badge order-badge order-correct';
+          orderBadge.textContent = `#${trueDisplayNumber}`;
+        } else {
+          orderBadge.className = 'badge order-badge order-incorrect';
+          orderBadge.textContent = '✕';
+        }
+      });
+    });
+
+    resetBtn.addEventListener('click', init);
+
+    fullscreenBtn.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+          alert(`Error entering fullscreen mode: ${err.message}`);
+        });
+      } else {
+        document.exitFullscreen();
+      }
+    });
+
+    window.addEventListener('resize', () => {
+      cards.forEach(card => {
+        card.x = Math.max(10, Math.min(window.innerWidth - CARD_WIDTH - 10, card.x));
+        card.y = Math.max(10, Math.min(board.clientHeight - CARD_HEIGHT - 10, card.y));
+        updateTransform(card);
+      });
+    });
+
+    init();
+  </script>
+</body>
+</html>
