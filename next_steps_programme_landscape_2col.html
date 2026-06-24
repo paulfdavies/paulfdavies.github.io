@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Next Steps Programme – Landscape 2 Column</title>
+  <style>
+:root {
+  --bg: #f1eaf4;
+  --navy: #1c2d66;
+  --purple: #9c7ed6;
+  --purple-dark: #8b6bcf;
+  --panel: #e2d2ee;
+  --line: #b9a4d6;
+  --white: #ffffff;
+  --tag: #3356ab;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--navy);
+  font-family: Aptos, Calibri, 'Segoe UI', Arial, sans-serif;
+}
+body {
+  display: flex;
+  justify-content: center;
+}
+.page {
+  width: min(96vw, 1440px);
+  min-height: 100vh;
+  padding: 24px 24px 20px;
+}
+.header {
+  text-align: center;
+  margin-bottom: 18px;
+}
+.header h1 {
+  margin: 0;
+  font-size: clamp(2.3rem, 5vw, 4.4rem);
+  line-height: 0.95;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+.header .sub {
+  margin-top: 10px;
+  font-size: clamp(1.1rem, 2vw, 1.8rem);
+  font-weight: 800;
+}
+.header .venue {
+  margin-top: 2px;
+  font-size: clamp(1rem, 1.6vw, 1.4rem);
+  font-weight: 800;
+}
+.columns {
+  display: grid;
+  grid-template-columns: 1.08fr 0.92fr;
+  gap: 20px;
+  align-items: start;
+}
+.panel {
+  background: var(--panel);
+  border: 2px solid var(--line);
+  border-radius: 22px;
+  overflow: hidden;
+  box-shadow: 0 6px 18px rgba(28, 45, 102, 0.08);
+}
+.panel-title {
+  background: linear-gradient(180deg, #ab8ce0 0%, var(--purple-dark) 100%);
+  color: var(--white);
+  text-align: center;
+  padding: 12px 16px;
+  font-size: clamp(1.35rem, 2vw, 2.2rem);
+  font-weight: 800;
+}
+.row {
+  display: grid;
+  grid-template-columns: 84px 154px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 2px solid var(--line);
+}
+.row:first-of-type { border-top: none; }
+.tag {
+  background: var(--tag);
+  color: var(--white);
+  border: 2px solid var(--navy);
+  border-radius: 14px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-align: center;
+  padding: 9px 6px;
+  letter-spacing: 0.03em;
+}
+.time {
+  font-weight: 800;
+  font-size: clamp(0.94rem, 1.3vw, 1.18rem);
+  line-height: 1.1;
+}
+.event-title {
+  font-weight: 800;
+  font-size: clamp(0.98rem, 1.28vw, 1.34rem);
+  line-height: 1.12;
+}
+.event-meta {
+  margin-top: 4px;
+  font-size: clamp(0.8rem, 0.97vw, 0.97rem);
+  line-height: 1.18;
+}
+.footer {
+  text-align: center;
+  margin-top: 16px;
+  font-size: clamp(0.92rem, 1.2vw, 1.16rem);
+}
+@media (max-width: 1000px) {
+  .columns { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  .page { padding: 18px 12px 18px; }
+  .row { grid-template-columns: 1fr; gap: 8px; }
+  .tag { width: fit-content; min-width: 76px; }
+}
+</style>
+</head>
+<body>
+  <main class="page">
+    <section class="header">
+      <h1>Next Steps Programme</h1>
+      <div class="sub">Monday 29 June and Tuesday 30 June</div>
+      <div class="venue">MPH</div>
+    </section>
+
+    <section class="columns">
+      <section class="panel">
+        <div class="panel-title">Monday 29 June</div>
+        <div class="row">
+  <div class="tag">UNI</div>
+  <div class="time">9:30am–10:30am</div>
+  <div class="event">
+    <div class="event-title">University of Sussex: Thinking About & Applying to University</div>
+    <div class="event-meta">Including creating a UCAS account • Speaker: TBC • Resources: Chromebooks</div>
+  </div>
+</div>
+<div class="row">
+  <div class="tag">UCAS</div>
+  <div class="time">10:30am–11:00am</div>
+  <div class="event">
+    <div class="event-title">UCAS Account Creation Session</div>
+    <div class="event-meta">Careers team available to support • Resources: Chromebooks</div>
+  </div>
+</div>
+<div class="row">
+  <div class="tag">UNI</div>
+  <div class="time">11:00am–12:15pm</div>
+  <div class="event">
+    <div class="event-title">University of Brighton: Preparing and Writing Personal Statements</div>
+    <div class="event-meta">Speaker: Jake Donkin-Peters</div>
+  </div>
+</div>
+<div class="row">
+  <div class="tag">LUNCH</div>
+  <div class="time">12:15pm–1:00pm</div>
+  <div class="event">
+    <div class="event-title">Lunch</div>
+    
+  </div>
+</div>
+<div class="row">
+  <div class="tag">APPR</div>
+  <div class="time">1:00pm–2:00pm</div>
+  <div class="event">
+    <div class="event-title">University of Portsmouth: Degree Apprenticeships</div>
+    <div class="event-meta">Speaker: Louis Ormston</div>
+  </div>
+</div>
+<div class="row">
+  <div class="tag">FIN</div>
+  <div class="time">2:00pm–3:00pm</div>
+  <div class="event">
+    <div class="event-title">University of Portsmouth: Student Finance</div>
+    <div class="event-meta">Speaker: Claudia Bradshaw</div>
+  </div>
+</div>
+<div class="row">
+  <div class="tag">EPQ</div>
+  <div class="time">3:00pm–4:00pm</div>
+  <div class="event">
+    <div class="event-title">EPQ Meeting</div>
+    <div class="event-meta">Speaker: Paul Davies</div>
+  </div>
+</div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-title">Tuesday 30 June</div>
+        <div class="row">
+  <div class="tag">APPR</div>
+  <div class="time">9:30am–10:30am</div>
+  <div class="event">
+    <div class="event-title">ESCG Apprenticeship Talk</div>
+    <div class="event-meta">Speaker: Vicki Orbell</div>
+  </div>
+</div>
+<div class="row">
+  <div class="tag">HE</div>
+  <div class="time">10:45am–11:45am</div>
+  <div class="event">
+    <div class="event-title">ESCG Higher Education Talk</div>
+    <div class="event-meta">Speaker: Meg Sullivan</div>
+  </div>
+</div>
+<div class="row">
+  <div class="tag">AWARD</div>
+  <div class="time">11:45am–12:15pm</div>
+  <div class="event">
+    <div class="event-title">Awards Ceremony</div>
+    
+  </div>
+</div>
+<div class="row">
+  <div class="tag">PARTY</div>
+  <div class="time">12:15pm–2:30pm</div>
+  <div class="event">
+    <div class="event-title">End of Year Party</div>
+    <div class="event-meta">Food, live music and games</div>
+  </div>
+</div>
+      </section>
+    </section>
+
+    <div class="footer">Two days of university, apprenticeships and next-step preparation.</div>
+  </main>
+</body>
+</html>
